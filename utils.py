@@ -132,14 +132,27 @@ def rej_sampling_new(N, grid, gp_function, n):
 
 
 
-#@title
-def find_index(events, grid):
+def find_index_b(events, grid):
   #print(events)
 #  if isinstance(events,jnp.ndarray):
 #    #print('jnp array')
 #    events=jnp.array(events)
 #    #print('events', events)
+  print('find index B')
+  n=events.shape[0];
+  ind=np.zeros(n)*np.nan
+  for i in range(n):  
+    if events.size>events.shape[0]:
+      ind[i]=jnp.nanargmin(np.sqrt(np.sum((events[i,:]-grid)**2,1)))
+    else:
+      ind[i]=jnp.nanargmin(np.abs(events[i]-grid))
+  #else:
+  #  ind=jnp.nanargmin(np.abs(events-grid))
+  return ind.astype(int)
+ 
 
+#@title
+def find_index(events, grid):
   if isinstance(events,np.ndarray):
     n=events.shape[0];
     ind=np.zeros(n)*np.nan

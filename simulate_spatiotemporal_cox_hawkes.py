@@ -75,11 +75,10 @@ args['alpha']=alpha
 args['beta']=beta
 
 
-data_name='LGCP_only' ## or LGCP_only or Hawkes or LGCP_Hawkes
-args['background_simulation']='LGCP_only' ## LGCP_only or constant  or LGCP_Hawkes
+data_name='LGCP_only'               ## LGCP_only or Hawkes or LGCP_Hawkes
+args['background_simulation']='LGCP_only'  ## LGCP_only or constant  or LGCP
 
-num_reps=1
-
+num_reps=2
 
 for i in range(num_reps):  
 
@@ -332,7 +331,7 @@ for i in range(num_reps):
     output_dict['simulated_output_background '+str(i)]=simulated_output_background
     output_dict['simulated_output_Hawkes'+str(i)]=simulated_output_Hawkes
     output_dict['simulated_output_Hawkes_train_test'+str(i)]=simulated_output_Hawkes_train_test
-    with open('data/'+data_name+'simulation.pkl', 'wb') as handle:
+    with open('data/'+data_name+'.pkl', 'wb') as handle:
         dill.dump(output_dict, handle)
 
 

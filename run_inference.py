@@ -23,10 +23,7 @@ if __name__=='__main__':
 	my_parser.add_argument('--num_samples', action='store', default=1000 , type=int, help='mcmc iterations')    
 	my_parser.add_argument('--num_warmup', action='store', default=500 , type=int, help='mcmc warmup')    
 	my_parser.add_argument('--num_chains', action='store', default=2 , type=int,help='mcmc num chains')
-	my_parser.add_argument('--num_thinning', 
-
-
-		action='store', default=2, type=int,help='mcmc num thinning')
+	my_parser.add_argument('--num_thinning', action='store', default=2, type=int,help='mcmc num thinning')
 	my_parser.add_argument('--max_tree_depth',action='store', default=20, type=int,help='max_tree_depth')
 	my_parser.add_argument('--save_results', action='store', default=True, type=bool,help='save output of mcmc')
 
@@ -142,9 +139,8 @@ if __name__=='__main__':
 	  #need to add the indices
 	  #print('t events shape',t_events_total.shape)
 	  #print('x_t size',args_train['x_t'].shape)
-	  
-	  indices_t=find_index(t_events_total, args_train['x_t'])
-	  indices_xy=find_index(xy_events_total.transpose(), args_train['x_xy'])
+	  indices_t=find_index_b(t_events_total, args_train['x_t'])
+	  indices_xy=find_index_b(xy_events_total.transpose(), args_train['x_xy'])
 	  args_train['indices_t']=indices_t
 	  args_train['indices_xy']=indices_xy
 	  

@@ -119,13 +119,13 @@ def spatiotemporal_hawkes_model(args):
     # temporal rate
     # mean
     if args['background']=='constant':     
-      a_0 = numpyro.sample("a_0", dist.HalfNormal(1))# this was 2,2
+      a_0 = numpyro.sample("a_0", dist.Normal(.5,1))#dist.HalfNormal(1)  dist.Normal(.5,1), dist.Normal(.5,1)2,2
       b_0=0 #b_0 = numpyro.sample("b_0", dist.Normal(1.5,1))
       mu_xyt=numpyro.deterministic("mu_xyt",jnp.exp(a_0+b_0))
       Itot_txy_back=numpyro.deterministic("Itot_txy_back",mu_xyt*args['T'] )
 
     if args['background']=='LGCP':
-      a_0 = numpyro.sample("a_0", dist.Normal(2,2))# this was 2,2
+      a_0 = numpyro.sample("a_0", dist.Normal(0,2))# this was 0,2
       #zero mean temporal gp ft 
       z_temporal = numpyro.sample("z_temporal", dist.Normal(jnp.zeros(args["z_dim_temporal"]), jnp.ones(args["z_dim_temporal"])))
       decoder_nn_temporal = vae_decoder_temporal(args["hidden_dim_temporal"], args["n_t"])  
@@ -156,11 +156,8 @@ def spatiotemporal_hawkes_model(args):
     beta = numpyro.sample("beta", dist.HalfNormal(0.3))#numpyro.sample("beta", dist.Gamma(.7,1)) FOR CONSTANT HAWKES HALFNOMRAL(.3)
     
     #spatial gaussian kernel parameters     
-    sigmax_2 = numpyro.sample("sigmax_2", dist.HalfNormal(1)) #FOR CONSTANT HAWKES HALFNOMRAL(2)
-    sigmay_2 =   sigmax_2#numpyro.sample("sigmay_2", dist.HalfNormal(.5))##numpyro.sample("sigmay_2", dist.Normal(0.5,1))#Exponential(.3))
-    
-    #alpha = numpyro.sample("alpha", dist.HalfNormal(0.8,2))#numpyro.sample("alpha", dist.Gamma(.5,1))##numpyro.sample("alpha", dist.HalfNormal(0.5,2))# has to be within 0,1
-    #beta = numpyro.sample("beta", dist.HalfNormal(0.3,2))#numpyro.sample("beta", dist.Gamma(.7,1))
+    sigmax_2 = numpyro.sample("sigmax_2", dist.HalfNormal(1)) # dist.Exponential(.1)) FOR CONSTANT HAWKES HALFNOMRAL(2)
+    sigmay_2 = sigmax_2#numpyro.sample("sigmay_2", dist.HalfNormal(.5))##numpyro.sample("sigmay_2", dist.Normal(0.5,1))#Exponential(.3))
     
     #spatial gaussian kernel parameters     
     #sigmax_2 = numpyro.sample("sigmax_2", dist.Exponential(.1))

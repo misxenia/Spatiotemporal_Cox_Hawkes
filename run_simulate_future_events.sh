@@ -1,8 +1,8 @@
 #to run from terminal you do 
 #	chmod +x ./run_simulate_future_events.sh
 #	./run_simulate_future_events.sh
-
-for ((k=43; k<100; k++))
+# dataset name LGCP_only,
+for ((k=0; k<1; k++))
 do
-    python run_simulate_future_events.py --dataset_name 'Poisson' --simulation_number "$k" --n_pred 200 #> "output/D1/D1M1S$i.txt"
+    python run_simulate_future_events.py --dataset_name 'LGCP_Hawkes' --simulation_number "$k" --n_pred 10
 done

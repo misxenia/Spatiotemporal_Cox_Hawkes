@@ -106,11 +106,7 @@ if __name__=='__main__':
 		rate_xy_true=simulated_output_Hawkes_background['rate_xy'].flatten()
 		rate_t_true=simulated_output_Hawkes_background['rate_t'].flatten()
 	
-
-
 	args_test={}
-
-
 	args_test['n_t']=80
 	args_test['x_t']=np.arange(0,args['T'],1)
 	args_test['T']=80

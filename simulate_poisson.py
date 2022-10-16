@@ -81,7 +81,7 @@ data_name='Poisson'
 args['background_simulation']='Poisson'
 
 
-num_reps=100
+num_reps=2
 for i in range(num_reps):
 
 	if load_data:
