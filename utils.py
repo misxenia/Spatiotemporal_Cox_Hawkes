@@ -17,7 +17,11 @@ from functools import partial
 
 #@title
 
-
+def square_mean(a,b):
+  return np.mean((a-b)**2)
+def sq_diff(a,b):
+  return np.sum((a-b)**2)
+  
 ## helper functions
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -133,12 +137,6 @@ def rej_sampling_new(N, grid, gp_function, n):
 
 
 def find_index_b(events, grid):
-  #print(events)
-#  if isinstance(events,jnp.ndarray):
-#    #print('jnp array')
-#    events=jnp.array(events)
-#    #print('events', events)
-  print('find index B')
   n=events.shape[0];
   ind=np.zeros(n)*np.nan
   for i in range(n):  
@@ -146,8 +144,6 @@ def find_index_b(events, grid):
       ind[i]=jnp.nanargmin(np.sqrt(np.sum((events[i,:]-grid)**2,1)))
     else:
       ind[i]=jnp.nanargmin(np.abs(events[i]-grid))
-  #else:
-  #  ind=jnp.nanargmin(np.abs(events-grid))
   return ind.astype(int)
  
 

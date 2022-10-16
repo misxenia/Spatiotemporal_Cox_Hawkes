@@ -441,13 +441,8 @@ def rej_sampling_new(N, grid, gp_function, n):
 
   candidate_points=grid[index];
 
-  #plt.plot(args['x_t'],gp_function)
-  #plt.plot(args['x_t'][index],gp_function[index],'x')
   U=np.random.uniform(0, f_max, N_max);
-  #plt.plot(x_t[index],U,'o')
   indices=jnp.where(U<gp_function[index]);
-  #plt.plot(x_t[index][indices],U[indices],'+' )
-  #plt.plot(x_t[index][indices],np.zeros(indices[0].size),'+' )
   accepted_points=grid[index][indices][0:N]
   accepted_f=gp_function[index][indices][0:N]
   return jnp.array(index[indices][0:N]), accepted_points, accepted_f
@@ -458,11 +453,6 @@ def lambda_S(nu_0, const_S, alpha,beta,t,event_times):
     #nu_0=exp(a_0+f(t))integ_back_xy
     return nu_0 + const_S*np.sum(alpha*beta*np.exp(-beta*(t-event_times))[event_times<t])
 
-
-
-#past_times, past_locs, N_new, x_min, x_max, y_min, y_max, 
-#lambda_0: the background
-#alpha, beta, sigma_sq: hawkes kernel params
 
 def simulate_spatiotemporal_hawkes_predictions(past_times, past_locs, N_new, x_min, x_max, y_min, y_max, lambda_0, alpha, beta, sigma_sq, integ_xy_back,background, f_t=None):
     #f_t and f_s will be evaluated on a grid
