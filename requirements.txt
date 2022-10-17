@@ -1,0 +1,28 @@
+absl-py @ file:///home/conda/feedstock_root/build_artifacts/absl-py_1658854572623/work
+certifi==2022.6.15
+cycler==0.11.0
+dill==0.3.5.1
+etils @ file:///home/conda/feedstock_root/build_artifacts/etils_1656005760076/work
+flatbuffers @ file:///home/conda/feedstock_root/build_artifacts/python-flatbuffers_1620718971772/work
+fonttools==4.34.4
+h5py==3.7.0
+importlib-resources @ file:///home/conda/feedstock_root/build_artifacts/importlib_resources_1658604161399/work
+jax @ file:///home/conda/feedstock_root/build_artifacts/jax_1658582308015/work
+jaxlib==0.3.14
+kiwisolver==1.4.4
+matplotlib==3.5.2
+multipledispatch==0.6.0
+numpy @ file:///Users/runner/miniforge3/conda-bld/numpy_1657483916415/work
+numpyro==0.10.0
+opt-einsum @ file:///home/conda/feedstock_root/build_artifacts/opt_einsum_1617859230218/work
+packaging==21.3
+pandas==1.4.3
+Pillow==9.2.0
+pyparsing==3.0.9
+python-dateutil==2.8.2
+pytz==2022.1
+scipy==1.9.0
+six==1.16.0
+tqdm==4.64.0
+typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1656706066251/work
+zipp @ file:///home/conda/feedstock_root/build_artifacts/zipp_1659400682470/work
