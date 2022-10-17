@@ -1,6 +1,21 @@
 ##
-#This can generate the events for a cox-hawkes process orda pure LGCP process
+# This can generate the events for a cox-hawkes process orda pure LGCP process
 ##
+# To generate a Hawkes process with constant background use 
+# data_name='Hawkes'             
+# args['background_simulation']='constant' 
+
+# To generate a Hawkes process with LGCP background use
+# data_name='LGCP_Hawkes'          
+# args['background_simulation']='LGCP' 
+
+# To generate an LGCP process
+# data_name='LGCP_only'        
+# args['background_simulation']='LGCP_only' 
+
+# Need to specify
+# num_reps and the parameters of the model
+
 
 # general libraries
 import time
@@ -78,7 +93,7 @@ args['beta']=beta
 data_name='LGCP_only'               ## LGCP_only or Hawkes or LGCP_Hawkes
 args['background_simulation']='LGCP_only'  ## LGCP_only or constant  or LGCP
 
-num_reps=2
+num_reps=100
 
 for i in range(num_reps):  
 

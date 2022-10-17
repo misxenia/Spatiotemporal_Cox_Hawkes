@@ -1,3 +1,8 @@
+
+#
+## This script runs the figure for the temporal distribution of the gunshots in the papers
+#
+
 %load_ext autoreload
 %autoreload 2
 

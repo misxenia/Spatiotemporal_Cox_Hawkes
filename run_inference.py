@@ -1,4 +1,19 @@
 #####
+# This script runs inference on a dataset given the inference model of choice
+#
+# Need to specify
+# dataset_name: which is the model used for generating the data
+# simulation_number: which of the 100 sequences from that data will  be inferred
+# model_name: which model will be used for inference
+#
+# mcmc parameters
+# num_samples, num_warmup, num_chains, num_thinning
+# 
+# HMC parameter
+# max_tree_depth
+
+
+
 
 # to run from terminal do
 ##

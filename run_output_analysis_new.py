@@ -1,4 +1,3 @@
-#
 # For a given simulation, dataset name and inference model, 
 # this script reads the <n_pred> true future (test) simulations from a file, and performs prediction on the test set
 # using the estimated parameters.
@@ -7,11 +6,16 @@
 # You can run this from terminal like below
 # python run_output_analysis_new.py --dataset_name 'LGCP_only' --simulation_number 0 --n_pred 200 --model_name 'LGCP_Hawkes'
 #
-# or using the bash file
+# or use the bash file to run multiple times
 #
-#
-#
-# When you output and save from piosson, and LGCP MAKE SURE THEY ARE ORDERED!!!!!
+
+# Need to specify 
+# dataset_name: from LGCP_Hawkes, LGCP, Hawkes
+# simulation_number: 1-100 depending how many you have simulated
+# model_name: from LGCP_Hawkes, LGCP, Hawkes, Poisson
+# n_pred: number of times to predict the future events (=200 in the paper)
+# simulate_predictions: True or False, whether to simulate future predictions or not
+
 
 if __name__=='__main__':
     
@@ -745,10 +749,6 @@ if __name__=='__main__':
 		  ErrorB_space[j]=np.sqrt(Ex+Ey)
 		  ErrorB_t[j]=np.sqrt(Et)
 
-		  #Ex=np.abs(np.mean(TRUE['X'],0)[indices]-X_pred[indices])
-		  #Ey=np.abs(np.mean(TRUE['Y'],0)[indices]-Y_pred[indices])	  
-		  #ErrorC_space[j]=np.sum(Ex+Ey)
-
 		  T_true_test=simulated_output_Hawkes_train_test['G_tot_t_test'][0,:n_stop]
 		  X_true_test=simulated_output_Hawkes_train_test['G_tot_y_test'][0,:n_stop]
 		  Y_true_test=simulated_output_Hawkes_train_test['G_tot_x_test'][0,:n_stop]
@@ -762,10 +762,6 @@ if __name__=='__main__':
 		  ErrorA_combined[j]=ErrorA_t[j]+ErrorA_space[j]
 		  ErrorB_combined[j]=ErrorB_t[j]+ErrorB_space[j]
 		  
-		  #Ex=np.abs(np.mean(TRUE['X'],0)[indices]-X_pred[indices])
-		  #Ey=np.abs(np.mean(TRUE['Y'],0)[indices]-Y_pred[indices])	  
-		  #ErrorD_space[j]=np.sum(Ex+Ey)
-
 		print('Predicting the next', n_stop, 'events')
 
 		ERROR['EA_mean_space_'+str(n_stop)]=ErrorA_space; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
@@ -782,12 +778,6 @@ if __name__=='__main__':
 
 		ERROR['ErrorA_combined_'+str(n_stop)]=ErrorA_combined; #=np.round(np.std(ErrorB_space));
 		ERROR['ErrorB_combined_'+str(n_stop)]=ErrorB_combined; #=np.round(np.std(ErrorB_t));
-
-		#ERROR['EC_mean_space_'+str(n_stop)]=ErrorC_space; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-		#ERROR['EC_std_space_'+str(n_stop)]=np.std(ErrorC_space); #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-
-		#ERROR['ED_mean_space_'+str(n_stop)]=ErrorD_space; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-		#ERROR['ED_std_space_'+str(n_stop)]=np.std(ErrorD_space); #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
 		
 	save_me=True
 	print('T test from original data sequence', simulated_output_Hawkes_train_test['G_tot_t_test'][0,:n_stop],'\n')

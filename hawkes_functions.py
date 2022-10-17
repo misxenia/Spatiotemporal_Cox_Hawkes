@@ -1,6 +1,6 @@
-#@title
 ## simulation function
 # general libraries
+
 import time
 import os
 

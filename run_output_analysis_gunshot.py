@@ -1,3 +1,7 @@
+#
+# This script runs output analysis on gunshot data of 2013 under LGCP-Hawkes
+#
+#  
 # general libraries
 import time
 import os

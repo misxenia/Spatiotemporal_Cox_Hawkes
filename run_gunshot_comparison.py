@@ -1,3 +1,25 @@
+#
+## This script  runs the gunshot data of 2012 with your choice of model 
+# from Hawkes, LGCP, LGCP Hawkes
+
+# Need to specify the following 
+# Model parameters
+# data_name='Gunfire'
+# model_folder='model_LGCP_Hawkes/'
+
+# args['background_simulation']='constant' among LGCP, LGCP_only, Poisson, constant
+# depending on the above specify the model folder
+# data_folder='gunfire_2012/'
+
+
+# MCMC parameters
+# post_samples=500 (make sure it is algined with the mcmc params of samples and warmup)
+# num_warmup, thinning, samples, chains
+
+# Prediction
+# n_simul is the number of times to predict the future events
+
+
 # general libraries
 import time
 import os
@@ -163,7 +185,6 @@ if args_train['background']!='constant':
 	args_train["z_dim_temporal"]= 20
 	with open('decoders/decoder_1d_T80_fixed_ls10', 'rb') as file:
 	    decoder_params = pickle.load(file)
-	    print(len(decoder_params))
 
 	args_train["decoder_params_temporal"] = decoder_params
 
@@ -179,7 +200,6 @@ if args_train['background']!='constant':
   #Load 2d spatial trained decoder
   with open('./decoders/decoder_2d_n25_infer_hyperpars'.format(n), 'rb') as file:
       decoder_params = pickle.load(file)
-      print(len(decoder_params))
 
   args_train["decoder_params_spatial"] = decoder_params
   
@@ -281,7 +301,6 @@ if args_train['background']=='Poisson':
 
 
 # inference
-print(args.keys())
 
 mcmc = run_mcmc(rng_key_post, model_mcmc, args_train)
 mcmc_samples=mcmc.get_samples()
@@ -628,7 +647,6 @@ n_simul=100
 
 PREDICTIONS={};
 PREDICTIONS['T']=np.zeros((n_simul,n_test));PREDICTIONS['X']=np.zeros((n_simul,n_test));PREDICTIONS['Y']=np.zeros((n_simul,n_test))
-print('args[x_xy]', args['x_xy'])
 
 if args_train['background'] in ['LGCP','LGCP_only']:
   rng_key, rng_key_predict = random.split(random.PRNGKey(2))

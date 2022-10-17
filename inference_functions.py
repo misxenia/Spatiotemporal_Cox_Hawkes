@@ -1,8 +1,3 @@
-#@title
-#args["T"]=T
-#args["n_t"]=T
-#args['x_t']=jnp.linspace(0, args["T"], args["n_t"])
-#hidden_dim = 50, z_dim = 20
 import os
 import pickle 
 import time 

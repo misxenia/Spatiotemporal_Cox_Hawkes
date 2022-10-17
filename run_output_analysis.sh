@@ -3,7 +3,7 @@
 #	./run_output_analysis.sh
 
 # LGCP_Hawkes, LGCP, Hawkes, Hawkes
-for ((k=0; k<1; k++))
+for ((k=0; k<100; k++))
 do
-    python run_output_analysis_new.py --dataset_name 'LGCP_Hawkes' --simulation_number "$k" --n_pred 20 --model_name 'Poisson' --simulate_predictions 'True' #> "output/D1/D1M1S$i.txt"
+    python run_output_analysis_new.py --dataset_name 'LGCP_Hawkes' --simulation_number "$k" --n_pred 20 --model_name 'Poisson' --simulate_predictions 'True'
 done

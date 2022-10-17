@@ -6,7 +6,7 @@
 #dataset_name: LGCP_only, LGCP_Hawkes, Hawkes
 #model_name: LGCP, LGCP_Hawkes, Hawkes, Poisson
 
-for ((i=0; i<1; i++))
+for ((i=0; i<100; i++))
 do
     python run_inference.py --dataset_name 'LGCP_only' --simulation_number "$i" --model_name 'LGCP' --num_chains 1 --num_samples 10 --num_warmup 10 --num_thinning 1
 done

@@ -1,3 +1,11 @@
+# 
+# This script runs inference on gunshot 2013 data for the experiment int he paper
+# 
+# Need to specify the MCMC parameters and
+# the model parameters (on the priors) 
+# in the spatiotemporal hawkes function
+
+
 # general libraries
 import time
 import os
@@ -120,7 +128,7 @@ n_xy=25
 
 ## I load my 1D temporal trained decoder parameters to generate GPs with hyperparameters that make sense in this domain
 # Load 
-#fixed lengthscale=10, var=1, T50
+# fixed lengthscale=10, var=1, T50
 with open('decoders/decoder_1d_T50_fixed_ls', 'rb') as file:
     decoder_params = pickle.load(file)
     print(len(decoder_params))
@@ -163,7 +171,6 @@ mcmc_samples=mcmc.get_samples()
 import dill
 output_dict = {}
 output_dict['model']=spatiotemporal_hawkes_model
-#output_dict['guide']=guide
 output_dict['samples']=mcmc.get_samples()
 output_dict['mcmc']=mcmc
 with open('output.pkl', 'wb') as handle:

@@ -1,3 +1,8 @@
+# This script generates the events from a homogeneous poisson process
+#
+# Need to specify num_reps and the parameter a_0
+
+
 # general libraries
 import time
 import os
@@ -33,7 +38,6 @@ import dill
 #
 # Simulate
 #
-
 
 load_data=False
 save_me=True
@@ -77,11 +81,10 @@ args['beta']=beta
 
 
 data_name='Poisson'
-
 args['background_simulation']='Poisson'
 
 
-num_reps=2
+num_reps=100
 for i in range(num_reps):
 
 	if load_data:
@@ -114,12 +117,6 @@ for i in range(num_reps):
 	    b_0_true=args['b_0']#simulated_output_background['b_0'];print(b_0_true)
 	    rate_xy_events_true=np.exp(a_0_true+b_0_true)*np.ones(n_obs_back)
 
-
-	  #rng_key, rng_key_predict = random.split(random.PRNGKey(22))
-	  #ST_Hawkes_predictive = Predictive(generate_spatiotemporal_offspring, num_samples=args["batch_size"])
-	  #simulated_output_Hawkes = ST_Hawkes_predictive(rng_key_predict, args, t_star=t_events_background, s_star=xy_events_background, alpha=alpha, beta=beta, method='remove_xy_outside_boundary')
-
-
 	simulated_output=simulated_output_background
 	simulated_output_Hawkes=simulated_output
 
@@ -151,40 +148,17 @@ for i in range(num_reps):
 
 
 	simulated_output_Hawkes_train_test={}
-	#print(simulated_output_Hawkes['t_events'].shape)
 	simulated_output_Hawkes['t_events']=t_events_background.reshape(1,n_obs);
 	simulated_output_Hawkes['G_tot_t']=t_events_background.reshape(1,n_obs);
-	
-	#print(xy_events_background)
 
 	simulated_output_Hawkes_train_test['G_tot_t_train']=simulated_output_Hawkes['t_events'][:,0:n_train]
 	simulated_output_Hawkes_train_test['G_tot_t_test']=simulated_output_Hawkes['t_events'][:,n_train:n_obs]
-	#print('simulated_output_Hawkes_train_test[G_tot_t_train]',simulated_output_Hawkes_train_test['G_tot_t_train'])
-	#print('simulated_output_Hawkes_train_test[G_tot_t_test]',simulated_output_Hawkes_train_test['G_tot_t_test'])
 	
 	simulated_output_Hawkes_train_test['G_tot_x_train']=simulated_output_Hawkes['xy_events'][:,0:n_train,0]
 	simulated_output_Hawkes_train_test['G_tot_x_test']=simulated_output_Hawkes['xy_events'][:,n_train:n_obs,0]
 
 	simulated_output_Hawkes_train_test['G_tot_y_train']=simulated_output_Hawkes['xy_events'][:,0:n_train,1]
 	simulated_output_Hawkes_train_test['G_tot_y_test']=simulated_output_Hawkes['xy_events'][:,n_train:n_obs,1]
-
-	#simulated_output_Hawkes_train_test['index_array_train']=simulated_output_Hawkes['index_array'][:,0:n_train]
-
-
-	'''
-	plt.plot(simulated_output['G_tot_t'][0,:])
-	plt.plot(simulated_output_Hawkes_train_test['G_tot_t_train'][0,:],'x')
-
-	if save_me:
-	  mypath='simulations_train_test_time.png'
-	  plt.savefig(filename+mypath)
-
-	plt.plot(simulated_output['G_tot_x'][0,:],simulated_output['G_tot_y'][0,:],'o')
-	plt.plot(simulated_output_Hawkes_train_test['G_tot_x_train'][0,:],simulated_output_Hawkes_train_test['G_tot_y_train'][0,:],'x')
-	if save_me:
-	  mypath='simulations_train_test_space.png'
-	  plt.savefig(filename+mypath)
-	'''
 
 	args['background']=args['background_simulation']
 	if i%10==0:
@@ -195,10 +169,6 @@ for i in range(num_reps):
 		if i==0:
 			output_dict = {}
 			output_dict['data_name']=data_name
-	  #output_dict['t_events_total']=t_events_total
-	  #output_dict['xy_events_total']=xy_events_total
-	  #output_dict['xy_events_background']=xy_events_background
-	  #output_dict['t_events_background']=t_events_background
 			output_dict['args']=args
 			output_dict['args_train']=args_train
 		output_dict['simulated_output_background '+str(i)]=simulated_output_background

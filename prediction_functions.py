@@ -1,6 +1,3 @@
-#past_times, past_locs, N_new, x_min, x_max, y_min, y_max, 
-#lambda_0: the background
-#alpha, beta, sigma_sq: hawkes kernel params
 # general libraries
 import time
 import os
