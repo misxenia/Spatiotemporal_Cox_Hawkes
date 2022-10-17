@@ -9,6 +9,7 @@ For the true dataset on gunshots, the first experiment is on inference under the
 * jax 0.2.13
 * jaxlib 0.1.67 
 
+See more in requirements.txt
 
 
 #### Simulate Data
