@@ -93,7 +93,7 @@ data_name='Gunfire'
 
 
 import pandas as pd
-df = pd.read_csv (r'../data/gunfire_data_filtered_2006_2013.csv')
+df = pd.read_csv (r'data/gunfire_data_filtered_2006_2013.csv')
 #print (df)
 
 index_2012=(pd.to_datetime(df['date']).dt.year==2012)#&(pd.to_datetime(df['date']).dt.month==4)
@@ -108,7 +108,7 @@ output_dict = {}
 output_dict['data_name']='gunfire-2012'
 output_dict['x']=df[indices]['X']
 output_dict['Y']= df[indices]['Y']
-with open('../data/'+name+'.pkl', 'wb') as handle:
+with open('data/'+name+'.pkl', 'wb') as handle:
     dill.dump(output_dict, handle)
 
 
