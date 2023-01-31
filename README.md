@@ -4,11 +4,8 @@ For the simulation experiment the code allows you to simulate data from the LGCP
 For the misspecification experiment the code allows you to simulate data from the models LGCP, LGCP-Hawkes and Hawkes and perform inference under all three. Then, future data are predicted using the estimated model and then compared with the ones under the 'true' model.
 For the true dataset on gunshots, the first experiment is on inference under the LGCP-Hawkes model. The second is a comparison of the three models in prediction.
 
-### The code runs with:
-* numpyro 0.6.0
-* jax 0.2.13
-* jaxlib 0.1.67 
-
+#### For code requirements see
+requirements.txt
 
 
 #### Simulate Data
