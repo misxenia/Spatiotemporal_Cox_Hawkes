@@ -119,8 +119,8 @@ def spatiotemporal_hawkes_model(args):
 
     #### EXPONENTIAL KERNEL for the excitation part
     #temporal exponential kernel parameters
-    alpha = numpyro.sample("alpha", dist.HalfNormal(0.8,2))#numpyro.sample("alpha", dist.Gamma(.5,1))##numpyro.sample("alpha", dist.HalfNormal(0.5,2))# has to be within 0,1
-    beta = numpyro.sample("beta", dist.HalfNormal(0.3,2))#numpyro.sample("beta", dist.Gamma(.7,1))
+    alpha = numpyro.sample("alpha", dist.HalfNormal(0.8))#numpyro.sample("alpha", dist.Gamma(.5,1))##numpyro.sample("alpha", dist.HalfNormal(0.5,2))# has to be within 0,1
+    beta = numpyro.sample("beta", dist.HalfNormal(0.3))#numpyro.sample("beta", dist.Gamma(.7,1))
     
     #spatial gaussian kernel parameters     
     sigmax_2 = numpyro.sample("sigmax_2", dist.Exponential(.1))

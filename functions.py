@@ -385,18 +385,26 @@ def spatiotemporal_homogenous_poisson(args):
     b_0=numpyro.deterministic("b_0",b_0)
 
   #print('t_events',t_events)
+  if t_events is None:
+    t_events=np.array(None)
+
   if t_events.any()==None:
+    
     #print('here 1')
     N=numpyro.sample("N",dist.Poisson(jnp.exp(a_0+b_0)*(t_max-t_min)))
     #t_events=np.random.uniform(t_min,t_max,N)
+    loglik=a_0*N-jnp.exp(a_0)*(t_max-t_min)
+    numpyro.deterministic("loglik",loglik)
     t_events=numpyro.deterministic("t_events",np.random.uniform(t_min,t_max,N))
     xy_events=numpyro.deterministic("xy_events",np.random.uniform(0,1,2*N).reshape(N,2))
   else:
     #print('here 2')
     N=t_events.shape[0];
     loglik=a_0*N-jnp.exp(a_0)*(t_max-t_min)
+    numpyro.deterministic("loglik",loglik)
     numpyro.factor("t_events", loglik) 
     numpyro.factor("xy_events", loglik)
+    
 
 
 
