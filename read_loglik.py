@@ -18,8 +18,8 @@ import pickle
 
 
 ## read output
-data_model_names=['LGCP_Hawkes/']
-inference_model_names=['Poisson/']
+data_model_names=['Hawkes/']
+inference_model_names=['LGCP_Hawkes/']
 i=0
 j=0
 data_folder='data_' + data_model_names[i]
@@ -37,10 +37,11 @@ TOTAL_combined_LOGLIKA=[]; TOTAL_combined_LOGLIKB=[]
 
 n_simul=100
 #for i,n in enumerate(model_names):
-for n in np.arange(1,n_simul):
+for n in np.arange(n_simul):
 	model_folder='model_'+inference_model_names[j]
 	filename='output/simulation_comparison/'+data_folder+model_folder
 	LOGLIK = pd.read_pickle(filename+'LOGLIK_'+str(n)+'.pkl')
+	#print('LOGLIK size', LOGLIK['loglik_10'].shape)
 	#print(LOGLIK.keys)
 	if n%10==0:
 		print('mean loglik for simulation A', n, np.mean(LOGLIK['loglik_10']))

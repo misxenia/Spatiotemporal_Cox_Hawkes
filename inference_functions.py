@@ -114,7 +114,7 @@ def Hawkes_likelihood(args):
     if args['background']in ['constant']:     
       b_0=0
       mu_xyt=numpyro.deterministic("mu_xyt",jnp.exp(a_0+b_0))
-      Itot_txy_back=numpyro.deterministic("Itot_txy_back",mu_xyt*args['T'] )
+      Itot_txy_back=numpyro.deterministic("Itot_txy_back",mu_xyt*(args['T_test']-args['T_train'] ))
 
     if args['background']=='LGCP':
       #zero mean temporal gp ft 
@@ -122,9 +122,9 @@ def Hawkes_likelihood(args):
       decoder_nn_temporal = vae_decoder_temporal(args["hidden_dim_temporal"], args["n_t"])  
       decoder_params = args["decoder_params_temporal"]
       v_t = numpyro.deterministic("v_t", decoder_nn_temporal[1](decoder_params, z_temporal))
-      f_t = numpyro.deterministic("f_t", v_t[0:args["n_t"]])
+      f_t = numpyro.deterministic("f_t", v_t[args['n_t_train']:args["n_t_test"]])
       rate_t = numpyro.deterministic("rate_t",jnp.exp(f_t+a_0))
-      Itot_t=numpyro.deterministic("Itot_t", jnp.sum(rate_t)/args["n_t"]*args["T"])
+      Itot_t=numpyro.deterministic("Itot_t", jnp.sum(rate_t)/(args["n_t_test"]-args["n_t_train"])*(args["T_test"]-args['T_train']))
       #Itot = numpyro.deterministic("Itot", v[len(x)])#Itot_t=jnp.trapz(mu_0*jnp.exp(f), back_t)
       f_t_events=f_t[args["indices_t"]]
 
@@ -154,11 +154,11 @@ def Hawkes_likelihood(args):
     #sigmax_2 = numpyro.sample("sigmax_2", dist.Exponential(.1))
     #sigmay_2 = numpyro.sample("sigmay_2", dist.Gamma(0.5,1))#Exponential(.3))
     
-    T,x_min,x_max,y_min,y_max = args['T'],args['x_min'],args['x_max'],args['y_min'],args['y_max']  
+    x_min,x_max,y_min,y_max = args['x_min'],args['x_max'],args['y_min'],args['y_max']  
     
-    T_diff=difference_matrix(t_events);
-    S_mat_x = difference_matrix(xy_events[0])
-    S_mat_y = difference_matrix(xy_events[1])
+    T_diff=difference_matrix(t_events[0:args['n_stop']]);
+    S_mat_x = difference_matrix(xy_events[0][0:args['n_stop']])
+    S_mat_y = difference_matrix(xy_events[1][0:args['n_stop']])
     S_diff_sq=(S_mat_x**2)/sigmax_2+(S_mat_y**2)/sigmay_2; 
     l_hawkes_sum=alpha*beta/(2*jnp.pi*jnp.sqrt(sigmax_2*sigmay_2))*jnp.exp(-beta*T_diff-0.5*S_diff_sq)
     l_hawkes = numpyro.deterministic('l_hawkes',jnp.sum(jnp.tril(l_hawkes_sum,-1),1))
@@ -166,18 +166,18 @@ def Hawkes_likelihood(args):
     if args['background'] in ['Hawkes','constant']:
       ell_1=numpyro.deterministic('ell_1',jnp.sum(jnp.log(l_hawkes+jnp.exp(a_0+b_0))))# the extra a_0 is for the firs term
     elif args['background']=='LGCP':
-      ell_1=numpyro.deterministic('ell_1',jnp.sum(jnp.log(l_hawkes+jnp.exp(a_0+b_0+f_t_events+f_xy_events))))# the extra a_0 is for the firs term
+      ell_1=numpyro.deterministic('ell_1',jnp.sum(jnp.log(l_hawkes+jnp.exp(a_0+b_0+f_t_events[0:args['n_stop']]+f_xy_events[0:args['n_stop']]))))# the extra a_0 is for the firs term
 
     #### hawkes integral
-    exponpart = alpha*(1-jnp.exp(-beta*(T-t_events)))
+    exponpart = alpha*(1-jnp.exp(-beta*(args['T_test']-t_events[0:args['n_stop']])))
     numpyro.deterministic("exponpart",exponpart)
     
-    s1max=(x_max-xy_events[0])/(jnp.sqrt(2*sigmax_2))
-    s1min=(xy_events[0])/(jnp.sqrt(2*sigmax_2))
+    s1max=(x_max-xy_events[0][0:args['n_stop']])/(jnp.sqrt(2*sigmax_2))
+    s1min=(xy_events[0][0:args['n_stop']])/(jnp.sqrt(2*sigmax_2))
     gaussianpart1=0.5*jax.scipy.special.erf(s1max)+0.5*jax.scipy.special.erf(s1min)
     
-    s2max=(y_max-xy_events[1])/(jnp.sqrt(2*sigmay_2))
-    s2min=(xy_events[1])/(jnp.sqrt(2*sigmay_2))
+    s2max=(y_max-xy_events[1][0:args['n_stop']])/(jnp.sqrt(2*sigmay_2))
+    s2min=(xy_events[1][0:args['n_stop']])/(jnp.sqrt(2*sigmay_2))
     gaussianpart2=0.5*jax.scipy.special.erf(s2max)+0.5*jax.scipy.special.erf(s2min)
     gaussianpart=gaussianpart2*gaussianpart1
     numpyro.deterministic("gaussianpart",gaussianpart)    

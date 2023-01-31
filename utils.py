@@ -10,7 +10,7 @@ import pickle
 import jax
 import jax.numpy as jnp
 from jax import random, lax, jit, ops
-from jax.experimental import stax
+#from jax.experimental import stax
 
 from functools import partial
 
@@ -26,7 +26,7 @@ def sq_diff(a,b):
 def find_nearest(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
-    return idx
+    return idx.astype(int)
 
 def find_nearest_2D(array, value):
     array = np.asarray(array)
