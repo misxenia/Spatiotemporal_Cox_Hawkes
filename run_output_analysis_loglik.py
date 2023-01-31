@@ -25,7 +25,7 @@ import numpyro
 import jax
 from numpyro.infer import Predictive
 import pandas as pd
-import h5py
+#import h5py
 import pickle
 
 if __name__=='__main__':
@@ -34,7 +34,7 @@ if __name__=='__main__':
 	my_parser.add_argument('--dataset_name', action='store', default='LGCP_Hawkes', type=str, required=True, help='simulated dataset')
 	my_parser.add_argument('--simulation_number', action='store', default=0, type=int, help='simulation series out of 100')
 	my_parser.add_argument('--model_name', action='store', default='LGCP', type=str, help='model name for inference')
-	my_parser.add_argument('--n_pred', action='store', default=10, type=int, help='n_pred')
+	my_parser.add_argument('--n_pred', action='store', default=10, type=int, help='number of predicted sequences')
 	my_parser.add_argument('--simulate_predictions', action='store', default='False', type=str, help='simulate predictions or not')
 	
     #num_chains, thinning
@@ -114,7 +114,7 @@ if __name__=='__main__':
 	print('Data generating name', data_name)
 	print('Inference model name', model_name)
 
-	filename='output/simulation_comparison/'+data_folder+model_folder
+	filename='./output/simulation_comparison/'+data_folder+model_folder
 	print('load output from', filename)
 
 	with open(filename+'output'+str(simulation_number)+'.pkl', 'rb') as file:
@@ -295,7 +295,7 @@ if __name__=='__main__':
 	#print(simulated_output_Hawkes.keys(),'\n')
 	a_0_post_mean=np.array(mcmc_samples['a_0'][n_total-post_samples:n_total].mean())
 	a_0_post_samples=np.array(mcmc_samples['a_0'][n_total-post_samples:n_total])
-
+	print('number of posterior samples', a_0_post_samples.size)
 
 	#if args_train['background']=='Poisson':
 	#	args_new={}
@@ -473,17 +473,19 @@ if __name__=='__main__':
 	#
 
 	post_mean=True ## always use this ie the posterior mean
-
+	T_test=80
+	T_train=50
 	if args_train['background'] in ['LGCP_only', 'LGCP']:
 		f_t_pred_mean=jnp.array(np.mean(GP_predictive_samples['f_t'][:,:],0));
 		f_xy_pred_mean=np.mean(GP_predictive_samples['f_xy'],0);
+		Itot_t_LGCP=jnp.sum(jnp.exp(GP_predictive_samples['f_t'][j][T_train:]))/args["n_t"]*(T_test-T_train)
+		Itot_xy_LGCP=jnp.sum(jnp.exp(GP_predictive_samples['f_xy'][j]))/args_train["n_xy"]**2
 
 
 	x_min, x_max, y_min, y_max=0,1,0,1
-	T_test=80
-	T_train=50
 
-	#n_pred=100
+
+	n_pred=100
 	nums=[10]
 	print('simulate_predictions', simulate_predictions)
 	with open('output/simulation_comparison/'+data_folder+'true_events_'+str(simulation_number)+'.pkl', 'rb') as handle:
@@ -611,6 +613,7 @@ if __name__=='__main__':
 			pickle.dump(PREDICTIONS, f, protocol=pickle.HIGHEST_PROTOCOL)
 	else:
 		PREDICTIONS=pd.read_pickle(filename+'predictions_'+str(simulation_number)+'.pkl')
+		
 		#with open(filename+'predictions_'+str(simulation_number)+'.pkl', 'wb') as f:
 		#	pickle.load(PREDICTIONS, f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -627,46 +630,106 @@ if __name__=='__main__':
     
 	#LOGLIK={};keys = [0, 1, 2];LOGLIK = {k:None for k in keys}#EA_mean_space=np.zeros(len(nums));
 	#LOGLIK_std={};keys = [0, 1, 2];LOGLIK_std = {k:None for k in keys}#EA_std_space=np.zeros(len(nums));
-	
+	n_pred=PREDICTIONS['T'].shape[0];
+	print('n_pred',n_pred)
 	LOGLIK=np.zeros(n_pred);
-
+	LOGLIK_B=np.zeros(n_pred);
+	post_samples=True
+	post_mean=True
+	num_samples=500
 	for _,n_stop in enumerate(nums):
-		FIT=pd.DataFrame({'loglik_'+str(n_stop): np.zeros(n_pred),'loglik_std_'+str(n_stop): np.zeros(n_pred)})
+		FIT=pd.DataFrame({'loglik_'+str(n_stop): np.zeros(n_pred),'loglik_std_'+str(n_stop): np.zeros(n_pred),'loglikB_'+str(n_stop): np.zeros(n_pred),'loglikB_std_'+str(n_stop): np.zeros(n_pred)})
 
-	for ii,n_stop in enumerate(nums):
-		print('n_stop')		
-		for j in range(n_pred):			
-			T_pred=PREDICTIONS['T'][j]
-			X_pred=PREDICTIONS['X'][j]
-			Y_pred=PREDICTIONS['Y'][j]
+	n_stop=10
 
-			#error using the original test data
-			indices=np.arange(n_stop)
+	if post_mean:	
 
-			if args_train['background']=='Poisson':
-				T_test=80
-				T_train=50
-				loglik= a_0_post_mean*n_test-jnp.exp(a_0_post_mean)*(T_test-T_train)
-				LOGLIK[j]=loglik
+		if args_train['background']=='Poisson':
+			T_test=80
+			T_train=50
+			#n_test_pred=np.random.poisson(a_0_post_mean*(T_test-T_train),n_pred)
+			#print('n_test_pred',n_test_pred)
+			print(a_0_post_mean)
+			loglik= a_0_post_mean*n_stop-jnp.exp(a_0_post_mean)*(T_test-T_train)
+			print('loglik using post mean',loglik)
+			LOGLIK_B=loglik
+
+		elif args_train['background']=='LGCP_only':
+			Itot_t_mean=jnp.sum(jnp.exp(f_t_pred_mean[T_train:]))/args["n_t"]*(T_test-T_train)
+			Itot_xy_mean=jnp.sum(jnp.exp(f_xy_pred_mean['f_xy']))/args_train["n_xy"]**2
+			LOGLIK_B=np.sum(f_t_pred_mean+f_xy_pred_mean+alpha_post_mean+beta_post_mean) - Itot_t_mean*Itot_xy_mean*lambda_0_post_mean
+				
+		else: 
+			args_test=args
+			args_test['alpha']=alpha_post_mean
+			args_test['beta']=beta_post_mean
+			args_test['a_0']=np.log(lambda_0_post_mean)
+			args_test['sigmax_2']=sigma_x_2_post_mean
+			args_test['sigmay_2']=sigma_x_2_post_mean
+			args_test['t_events']=T_pred
+			args_test['xy_events']=np.array((X_pred,Y_pred))
+			Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=n_pred)
+			HK = Hawkes_lik_predictive(rng_key, args_test)
+			LOGLIK_B[j]=HK['loglik']
+				
+			print('Predicting the next', n_stop, 'events')
+
+		FIT['loglikB_'+str(n_stop)]=LOGLIK_B; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
+		FIT['loglikB_std_'+str(n_stop)]=np.std(LOGLIK_B); #=np.round(np.std(ErrorA_space));
+
+
+	if post_samples:
 			
-			if args_train['background']=='constant':
-				args
-				Hawkes_likelihood(args)
-				LOGLIK[j]=loglik	
+		if args_train['background']=='Poisson':
 
+			#n_test_pred=np.random.poisson(a_0_post_samples*(T_test-T_train), n_pred)
+			#print('n_test_pred',n_test_pred)
+			loglik= a_0_post_samples[0:n_pred]*n_stop-jnp.exp(a_0_post_samples[0:n_pred])*(T_test-T_train)
+			print('loglik using samples',loglik)
+			LOGLIK=loglik
+
+		elif args_train['background']=='LGCP_only':
+			LOGLIK=np.sum(GP_predictive_samples['f_t'][ind_t_i]+GP_predictive_samples['f_xy'][ind_t_i]+alpha_post_samples[j]+beta_post_samples[j],1)
+			LOGLIK-=Itot_xy_LGCP*Itot_t_LGCP*lambda_0_post_samples
+
+		else:	
+
+			for ii,n_stop in enumerate(nums):
+				print('n_stop')		
+				for j in range(n_pred):			
+					T_pred=PREDICTIONS['T'][j]
+					X_pred=PREDICTIONS['X'][j]
+					Y_pred=PREDICTIONS['Y'][j]
+
+					#error using the original test data
+					indices=np.arange(n_stop)
 					
-
-		print('Predicting the next', n_stop, 'events')
+					if args['background'] in ['LGCP_Hawkes', 'Hawkes']:
+						args_test=args
+						args_test['alpha']=alpha_post_samples[j]
+						args_test['beta']=beta_post_samples[j]
+						args_test['a_0']=np.log(lambda_0_post_samples[j])
+						args_test['sigmax_2']=sigma_x_2_post_samples[j]
+						args_test['sigmay_2']=sigma_x_2_post_samples[j]
+						args_test['t_events']=T_pred
+						args_test['xy_events']=np.array((X_pred,Y_pred))
+						Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=1)
+						HK = Hawkes_lik_predictive(rng_key, args_test)
+						LOGLIK[j]=HK['loglik']		
+		
 		FIT['loglik_'+str(n_stop)]=LOGLIK; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
 		FIT['loglik_std_'+str(n_stop)]=np.std(LOGLIK); #=np.round(np.std(ErrorA_space));
 
 
 
-	save_me=True
+	save_error=False
 	print('T test from original data sequence', simulated_output_Hawkes_train_test['G_tot_t_test'][0,:n_stop],'\n')
 	print('T estimated', PREDICTIONS['T'][0,:n_stop],'\n')
 
-	if save_me:
+	if save_error:
 		print('Saving data in', filename+'ERROR_'+str(simulation_number)+'.pkl')
-
-	FIT.to_pickle(filename+'FIT_'+str(simulation_number)+'.pkl')  # where to save it, usually as a .pkl
+	
+	save_loglik=True
+	if save_loglik:
+		print('Saving loglik in', filename+'LOGLIK_'+str(simulation_number)+'.pkl')
+		FIT.to_pickle(filename+'LOGLIK_'+str(simulation_number)+'.pkl')  # where to save it, usually as a .pkl
