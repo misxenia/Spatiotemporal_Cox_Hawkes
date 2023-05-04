@@ -10,7 +10,7 @@ import pickle
 import jax
 import jax.numpy as jnp
 from jax import random, lax, jit, ops
-from jax.experimental import stax
+from jax.example_libraries import stax
 
 from functools import partial
 from utils import *

@@ -18,14 +18,14 @@ import pickle
 
 
 ## read output
-data_model_names=['Hawkes/']
+data_model_names=['LGCP_Hawkes/']#one of LGCP_only, LGCP_Hawkes
 inference_model_names=['LGCP_Hawkes/']
 i=0
 j=0
 data_folder='data_' + data_model_names[i]
-print('\n Data simulated from ', data_model_names[i],'\n')
+print('/n Data simulated from ', data_model_names[i],'\n')
 
-print('\n Data inferred from ', inference_model_names[j],'\n')
+print('/n Data inferred from ', inference_model_names[j],'\n')
 
 #model_names=['LGCP/','LGCP_Hawkes/','Hawkes/','Poisson/']
 #model_names=['Hawkes']
@@ -35,7 +35,7 @@ Total_LOGLIKC_space=[];Total_std_LOGLIKC_space=[];
 Total_LOGLIKD_space=[];Total_std_LOGLIKD_space=[];
 TOTAL_combined_LOGLIKA=[]; TOTAL_combined_LOGLIKB=[]
 
-n_simul=100
+n_simul=10
 #for i,n in enumerate(model_names):
 for n in np.arange(n_simul):
 	model_folder='model_'+inference_model_names[j]

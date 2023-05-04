@@ -18,7 +18,7 @@ from numpyro.diagnostics import hpdi
 from random import randint
 
 
-from utils import difference_matrix
+from utils import difference_matrix, difference_matrix_partial
 
 def vae_encoder_temporal(hidden_dim, z_dim):
     return stax.serial(
@@ -102,7 +102,8 @@ def vae_guide_spatial(batch, hidden_dim1, hidden_dim2, z_dim):
   return z
 
 
-def Hawkes_likelihood(args):
+
+def Hawkes_likelihood_test(args):
     t_events=args["t_events"]
     xy_events=args["xy_events"]
     N=t_events.shape[0]
@@ -115,26 +116,18 @@ def Hawkes_likelihood(args):
       b_0=0
       mu_xyt=numpyro.deterministic("mu_xyt",jnp.exp(a_0+b_0))
       Itot_txy_back=numpyro.deterministic("Itot_txy_back",mu_xyt*(args['T_test']-args['T_train'] ))
+      #Itot_txy_back=numpyro.deterministic("Itot_txy_back",mu_xyt*(args['T_test'] ))
+      
 
     if args['background']=='LGCP':
-      #zero mean temporal gp ft 
-      z_temporal = numpyro.sample("z_temporal", dist.Normal(jnp.zeros(args["z_dim_temporal"]), jnp.ones(args["z_dim_temporal"])))
-      decoder_nn_temporal = vae_decoder_temporal(args["hidden_dim_temporal"], args["n_t"])  
-      decoder_params = args["decoder_params_temporal"]
-      v_t = numpyro.deterministic("v_t", decoder_nn_temporal[1](decoder_params, z_temporal))
-      f_t = numpyro.deterministic("f_t", v_t[args['n_t_train']:args["n_t_test"]])
+      f_t = args['f_t']#numpyro.deterministic("f_t", v_t[args['n_t_train']:args["n_t_test"]])
       rate_t = numpyro.deterministic("rate_t",jnp.exp(f_t+a_0))
-      Itot_t=numpyro.deterministic("Itot_t", jnp.sum(rate_t)/(args["n_t_test"]-args["n_t_train"])*(args["T_test"]-args['T_train']))
+      Itot_t=numpyro.deterministic("Itot_t", jnp.sum(rate_t))#/(args["n_t_test"]-args["n_t_train"])*(args["T_test"]-args['T_train']))
       #Itot = numpyro.deterministic("Itot", v[len(x)])#Itot_t=jnp.trapz(mu_0*jnp.exp(f), back_t)
       f_t_events=f_t[args["indices_t"]]
 
-      # zero mean spatial gp
       b_0=0
-      #numpyro.sample("b_0", dist.Normal(1,3))# this was 2,2
-      z_spatial = numpyro.sample("z_spatial", dist.Normal(jnp.zeros(args["z_dim_spatial"]), jnp.ones(args["z_dim_spatial"])))
-      decoder_nn = vae_decoder_spatial(args["hidden_dim2_spatial"], args["hidden_dim1_spatial"], args["n_xy"])  
-      decoder_params = args["decoder_params_spatial"]
-      f_xy = numpyro.deterministic("f_xy", decoder_nn[1](decoder_params, z_spatial))
+      f_xy = args['f_xy']#umpyro.deterministic("f_xy", decoder_nn[1](decoder_params, z_spatial))
       rate_xy = numpyro.deterministic("rate_xy",jnp.exp(f_xy+b_0))
       Itot_xy=numpyro.deterministic("Itot_xy", jnp.sum(rate_xy)/args["n_xy"]**2)
       f_xy_events=f_xy[args["indices_xy"]]
@@ -156,9 +149,98 @@ def Hawkes_likelihood(args):
     
     x_min,x_max,y_min,y_max = args['x_min'],args['x_max'],args['y_min'],args['y_max']  
     
-    T_diff=difference_matrix(t_events[0:args['n_stop']]);
-    S_mat_x = difference_matrix(xy_events[0][0:args['n_stop']])
-    S_mat_y = difference_matrix(xy_events[1][0:args['n_stop']])
+    T_diff=difference_matrix_partial(t_events,args['partial_index']);
+    #T_diff.at[0:args['n_train'],:].set(0)
+    S_mat_x = difference_matrix_partial(xy_events[0],args['partial_index'])
+    #S_mat_x.at[0:args['n_train'],:].set(0)
+    S_mat_y = difference_matrix_partial(xy_events[1],args['partial_index'])
+    #S_mat_y.at[0:args['n_train'],:].set(0)
+    
+    S_diff_sq=(S_mat_x**2)/sigmax_2+(S_mat_y**2)/sigmay_2; 
+    l_hawkes_sum=alpha*beta/(2*jnp.pi*jnp.sqrt(sigmax_2*sigmay_2))*jnp.exp(-beta*T_diff-0.5*S_diff_sq)
+    #lower_tr_mat=jnp.tril(l_hawkes_sum,-1)
+    #print('rows of lower_tr_mat',lower_tr_mat.shape)
+    #lower_tr_mat.at[0:args['n_train']].set(0)
+    l_hawkes = numpyro.deterministic('l_hawkes',jnp.sum(l_hawkes_sum,1))
+
+    if args['background'] in ['Hawkes','constant']:
+      ell_1=numpyro.deterministic('ell_1',jnp.sum(jnp.log(l_hawkes+jnp.exp(a_0+b_0))))# the extra a_0 is for the firs term
+    elif args['background']=='LGCP':
+      ell_1=numpyro.deterministic('ell_1',jnp.sum(jnp.log(l_hawkes+jnp.exp(a_0+b_0+f_t_events+f_xy_events))))# the extra a_0 is for the firs term
+
+    #### hawkes integral
+    exponpart = alpha*(1-jnp.exp(-beta*(args['T_test']-t_events[args['partial_index']])))
+    numpyro.deterministic("exponpart",exponpart)
+    
+    s1max=(x_max-xy_events[0][args['partial_index']])/(jnp.sqrt(2*sigmax_2))
+    s1min=(xy_events[0][args['partial_index']])/(jnp.sqrt(2*sigmax_2))
+    gaussianpart1=0.5*jax.scipy.special.erf(s1max)+0.5*jax.scipy.special.erf(s1min)
+    
+    s2max=(y_max-xy_events[1][args['partial_index']])/(jnp.sqrt(2*sigmay_2))
+    s2min=(xy_events[1][args['partial_index']])/(jnp.sqrt(2*sigmay_2))
+    gaussianpart2=0.5*jax.scipy.special.erf(s2max)+0.5*jax.scipy.special.erf(s2min)
+    gaussianpart=gaussianpart2*gaussianpart1
+    numpyro.deterministic("gaussianpart",gaussianpart)    
+
+    ## total integral
+    Itot_txy=jnp.sum(exponpart*gaussianpart)+Itot_txy_back
+    #Itot_txy=Itot_txy_true
+    numpyro.deterministic("Itot_txy",Itot_txy)
+    loglik=numpyro.deterministic('loglik',ell_1-Itot_txy)
+
+
+
+
+
+def Hawkes_likelihood_old(args):
+    t_events=args["t_events"]
+    xy_events=args["xy_events"]
+    N=t_events.shape[0]
+
+    ####### LGCP BACKGROUND
+    # temporal rate
+    # mean
+    a_0 = args['a_0']
+    if args['background']in ['constant']:     
+      b_0=0
+      mu_xyt=numpyro.deterministic("mu_xyt",jnp.exp(a_0+b_0))
+      Itot_txy_back=numpyro.deterministic("Itot_txy_back",mu_xyt*(args['T_test'] ))
+
+    if args['background']=='LGCP':
+      #zero mean temporal gp ft 
+      f_t = args['f_t']
+      rate_t = numpyro.deterministic("rate_t",jnp.exp(f_t+a_0))
+      Itot_t=numpyro.deterministic("Itot_t", jnp.sum(rate_t))#/(args["n_t_test"]-args["n_t_train"])*(args["T_test"]-args['T_train']))
+      #Itot = numpyro.deterministic("Itot", v[len(x)])#Itot_t=jnp.trapz(mu_0*jnp.exp(f), back_t)
+      f_t_events=f_t[args["indices_t"]]
+
+      # zero mean spatial gp
+      b_0=0
+      f_xy = args["f_xy"]
+      rate_xy = numpyro.deterministic("rate_xy",jnp.exp(f_xy+b_0))
+      Itot_xy=numpyro.deterministic("Itot_xy", jnp.sum(rate_xy)/args["n_xy"]**2)
+      f_xy_events=f_xy[args["indices_xy"]]
+      Itot_txy_back=numpyro.deterministic("Itot_txy_back",Itot_t*Itot_xy)#jnp.sum(mu_xyt*args['T']/args['n_t']/args['n']**2))
+
+
+    #### EXPONENTIAL KERNEL for the excitation part
+    #temporal exponential kernel parameters
+    alpha = args['alpha']
+    beta =  args['beta']
+    
+    #spatial gaussian kernel parameters     
+    sigmax_2 = args['sigmax_2']
+    sigmay_2 = args['sigmay_2']#numpyro.sample("sigmay_2", dist.HalfNormal(.5))##numpyro.sample("sigmay_2", dist.Normal(0.5,1))#Exponential(.3))
+    
+    #spatial gaussian kernel parameters     
+    #sigmax_2 = numpyro.sample("sigmax_2", dist.Exponential(.1))
+    #sigmay_2 = numpyro.sample("sigmay_2", dist.Gamma(0.5,1))#Exponential(.3))
+    
+    x_min,x_max,y_min,y_max = args['x_min'],args['x_max'],args['y_min'],args['y_max']  
+    
+    T_diff=difference_matrix(t_events)
+    S_mat_x = difference_matrix(xy_events[0])
+    S_mat_y = difference_matrix(xy_events[1])
     S_diff_sq=(S_mat_x**2)/sigmax_2+(S_mat_y**2)/sigmay_2; 
     l_hawkes_sum=alpha*beta/(2*jnp.pi*jnp.sqrt(sigmax_2*sigmay_2))*jnp.exp(-beta*T_diff-0.5*S_diff_sq)
     l_hawkes = numpyro.deterministic('l_hawkes',jnp.sum(jnp.tril(l_hawkes_sum,-1),1))
@@ -166,18 +248,18 @@ def Hawkes_likelihood(args):
     if args['background'] in ['Hawkes','constant']:
       ell_1=numpyro.deterministic('ell_1',jnp.sum(jnp.log(l_hawkes+jnp.exp(a_0+b_0))))# the extra a_0 is for the firs term
     elif args['background']=='LGCP':
-      ell_1=numpyro.deterministic('ell_1',jnp.sum(jnp.log(l_hawkes+jnp.exp(a_0+b_0+f_t_events[0:args['n_stop']]+f_xy_events[0:args['n_stop']]))))# the extra a_0 is for the firs term
+      ell_1=numpyro.deterministic('ell_1',jnp.sum(jnp.log(l_hawkes+jnp.exp(a_0+b_0+f_t_events+f_xy_events))))# the extra a_0 is for the firs term
 
     #### hawkes integral
-    exponpart = alpha*(1-jnp.exp(-beta*(args['T_test']-t_events[0:args['n_stop']])))
+    exponpart = alpha*(1-jnp.exp(-beta*(args['T_test']-t_events)))
     numpyro.deterministic("exponpart",exponpart)
     
-    s1max=(x_max-xy_events[0][0:args['n_stop']])/(jnp.sqrt(2*sigmax_2))
-    s1min=(xy_events[0][0:args['n_stop']])/(jnp.sqrt(2*sigmax_2))
+    s1max=(x_max-xy_events[0])/(jnp.sqrt(2*sigmax_2))
+    s1min=(xy_events[0])/(jnp.sqrt(2*sigmax_2))
     gaussianpart1=0.5*jax.scipy.special.erf(s1max)+0.5*jax.scipy.special.erf(s1min)
     
-    s2max=(y_max-xy_events[1][0:args['n_stop']])/(jnp.sqrt(2*sigmay_2))
-    s2min=(xy_events[1][0:args['n_stop']])/(jnp.sqrt(2*sigmay_2))
+    s2max=(y_max-xy_events[1])/(jnp.sqrt(2*sigmay_2))
+    s2min=(xy_events[1])/(jnp.sqrt(2*sigmay_2))
     gaussianpart2=0.5*jax.scipy.special.erf(s2max)+0.5*jax.scipy.special.erf(s2min)
     gaussianpart=gaussianpart2*gaussianpart1
     numpyro.deterministic("gaussianpart",gaussianpart)    

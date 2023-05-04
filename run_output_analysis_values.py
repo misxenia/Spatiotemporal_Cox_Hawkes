@@ -5,7 +5,7 @@
 # Then computed the error stores it in a file.
 #
 # You can run this from terminal like below
-# python run_output_analysis_new.py --dataset_name 'LGCP_only' --simulation_number 0 --n_pred 200 --model_name 'LGCP_Hawkes'
+# python run_output_analysis_plots.py --dataset_name 'LGCP_only' --simulation_number 0 --n_pred 200 --model_name 'LGCP_Hawkes'
 #
 # or using the bash file
 #
@@ -27,9 +27,6 @@ import pandas as pd
 import pickle
 
 if __name__=='__main__':
-    
-
-
 	my_parser = argparse.ArgumentParser()
 	my_parser.add_argument('--dataset_name', action='store', default='LGCP_Hawkes', type=str, required=True, help='simulated dataset')
 	my_parser.add_argument('--simulation_number', action='store', default=0, type=int, help='simulation series out of 100')
@@ -57,6 +54,8 @@ if __name__=='__main__':
 	else:
 		simulate_predictions=True
 
+	save_plots=True
+
     ## making sure have got correct file paths
     #script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
     
@@ -73,15 +72,24 @@ if __name__=='__main__':
 	load_data=True
 
 	## choose the number of dataset
-
 	with open('data/'+data_name+'.pkl', 'rb') as file:
 		print(data_name)
 		output_dict = dill.load(file)
 		simulated_output_Hawkes=output_dict['simulated_output_Hawkes'+str(simulation_number)]
 		simulated_output_Hawkes_train_test=output_dict['simulated_output_Hawkes_train_test'+str(simulation_number)]
 		simulated_output_Hawkes_background=output_dict['simulated_output_background '+str(simulation_number)]	
+		print('simulated param keys', simulated_output_Hawkes_background.keys())
+		#print('ind_t_i shape', simulated_output_Hawkes_background['ind_t_i'][0].shape)
+		#print('ind_t_i',simulated_output_Hawkes_background['ind_t_i'])
+		#print('ind_xy_i ',simulated_output_Hawkes_background['ind_xy_i'])
+		
+		#print('ind_xy_i shape',simulated_output_Hawkes_background['ind_xy_i'].shape)
+
 		args_train=output_dict['args_train']
 		args=output_dict['args']
+		print('args_train keys', args_train.keys())
+		print('args keys', args.keys())
+		
 		data_name=output_dict['data_name']
 		a_0_true=args['a_0'] #simulated_output_background['a_0'];print(a_0_true)
 		n_obs=simulated_output_Hawkes['G_tot_t'].size;#print('n_obs',n_obs)
@@ -89,7 +97,6 @@ if __name__=='__main__':
 		b_0_true=args['b_0']#simulated_output_background['b_0'];print(b_0_true)
 		alpha=args['alpha']
 		beta=args['beta']
-
 
 
 	# find generating data folder
@@ -143,6 +150,7 @@ if __name__=='__main__':
 		raise('what is model name?')
 
 
+	print('keys in mcmc_samples are ', mcmc_samples.keys(),'\n')
 
 	n_train=simulated_output_Hawkes_train_test['G_tot_t_train'].size
 	t_events_total=simulated_output_Hawkes_train_test['G_tot_t_train'][0]
@@ -151,7 +159,15 @@ if __name__=='__main__':
 	args_train['xy_events']=xy_events_total
 	#when reading the data
 
-	save_me=True
+	x_t=np.arange(0,50,1)
+
+	ind_t_i=find_index_b(t_events_total,x_t)	
+	n_xy = 25
+	grid = jnp.arange(0, 1, 1/n_xy)
+	u, v = jnp.meshgrid(grid, grid)
+	x_xy = jnp.array([u.flatten(), v.flatten()]).transpose((1, 0)) 
+	ind_xy_i=find_index_b(xy_events_total.transpose(), x_xy)
+
 
 	if 'a_0' in mcmc_samples.keys():
 		fig, ax = plt.subplots(1, 2,figsize=(15,5))
@@ -162,79 +178,78 @@ if __name__=='__main__':
 		ax[1].hist(mcmc_samples['a_0'],bins=150,density=True)
 		ax[1].axvline(a_0_true+b_0_true,color='red')
 		ax[1].set_xlim(([mcmc_samples['a_0'].min()-.5,mcmc_samples['a_0'].max()+.5]))
-
-	if save_me:
-		mypath='a_0.png'
-		plt.savefig(filename+mypath)
+		if save_plots:
+			mypath='a_0.png'
+			plt.savefig(filename+mypath)
 	  
-	fig, ax = plt.subplots(1, 2,figsize=(15,5))
 	if 'alpha' in mcmc_samples.keys():
+		fig, ax = plt.subplots(1, 2,figsize=(15,5))
 		ax[0].plot(mcmc_samples['alpha'])
 		ax[0].axhline(alpha,color='red')
 		ax[0].set_xlabel('alpha')
 		#ax[0].axhline(alpha,color='red')
 		ax[1].hist(mcmc_samples['alpha'],bins=150,density=True)
 		ax[1].axvline(alpha,color='red')
-	if save_me:
-		mypath='alpha.png'
-		plt.savefig(filename+mypath)
+		if save_plots:
+			mypath='alpha.png'
+			plt.savefig(filename+mypath)
 
 
-	fig, ax = plt.subplots(1, 2,figsize=(15,5))
 	if 'sigmax_2' in mcmc_samples.keys():
+		fig, ax = plt.subplots(1, 2,figsize=(15,5))
 		ax[0].plot(mcmc_samples['sigmax_2'])
 		ax[0].axhline(args['sigmax_2'],color='red')
 		ax[1].hist(mcmc_samples['sigmax_2'],bins=150,density=True)
 		ax[1].axvline(args['sigmax_2'],color='red')
 		ax[0].set_xlabel('sigma_x_2')
-
-		if save_me:
+		if save_plots:
 			mypath='sigma2_x.png'
 			plt.savefig(filename+mypath)
 
 
+#	if 'sigmax_2' in mcmc_samples.keys():	  
+#		fig, ax = plt.subplots(2, 2,figsize=(15,5))
+#		ax[0,0].plot(mcmc_samples['alpha'])
+#		ax[0,0].axhline(args['alpha'],color='red')
+#		ax[0,0].set_ylabel('alpha')
+#
+#		ax[0,1].plot(mcmc_samples['beta'])
+#		ax[0,1].axhline(args['beta'],color='red')
+#		ax[0,1].set_ylabel('beta')
+#
+#		ax[1,0].plot(mcmc_samples['a_0'])
+#		ax[1,0].axhline(args['a_0'],color='red')
+#		ax[1,0].set_ylabel('a_0')
+#
+#		ax[1,1].plot(mcmc_samples['sigmax_2'])
+#		ax[1,1].axhline(args['sigmax_2'],color='red')
+#		ax[1,1].set_ylabel('sigma')
+#
+#		if save_plots:
+#			mypath='trace_plots.png'
+#			plt.savefig(filename+mypath)
+#
+
 	fig, ax = plt.subplots(2, 2,figsize=(15,5))
-	if 'sigmax_2' in mcmc_samples.keys():	  
-		ax[0,0].plot(mcmc_samples['alpha'])
-		ax[0,0].axhline(args['alpha'],color='red')
-		ax[0,0].set_ylabel('alpha')
-
-		ax[0,1].plot(mcmc_samples['beta'])
-		ax[0,1].axhline(args['beta'],color='red')
-		ax[0,1].set_ylabel('beta')
-
-		ax[1,0].plot(mcmc_samples['a_0'])
-		ax[1,0].axhline(args['a_0'],color='red')
-		ax[1,0].set_ylabel('a_0')
-
-		ax[1,1].plot(mcmc_samples['sigmax_2'])
-		ax[1,1].axhline(args['sigmax_2'],color='red')
-		ax[1,1].set_ylabel('sigma')
-
-		if save_me:
-			mypath='trace_plots.png'
-			plt.savefig(filename+mypath)
-
-	fig, ax = plt.subplots(2, 2,figsize=(15,5))
-
 	if 'sigmax_2' in mcmc_samples.keys():
 		ax[0,0].plot(mcmc_samples['sigmax_2'])
 		ax[0,0].axhline(args['sigmax_2'],color='red')
 		ax[0,1].hist(mcmc_samples['sigmax_2'],bins=150,density=True)
 		ax[0,1].axvline(args['sigmax_2'],color='red')
-	if 'sigmay_2' in mcmc_samples.keys():
-		ax[1,0].plot(mcmc_samples['sigmay_2'])
-		ax[1,0].axhline(args['sigmay_2'],color='red')
-		ax[1,1].hist(mcmc_samples['sigmay_2'],bins=150,density=True)
-		ax[1,1].axvline(args['sigmay_2'],color='red')
 
-		if save_me:
-			mypath='sigma2_x_y.png'
+	if 'sigmay_2' in mcmc_samples.keys():
+		fig, ax = plt.subplots(1, 2,figsize=(15,5))
+		ax[0,0].plot(mcmc_samples['sigmay_2'])
+		ax[0,0].axhline(args['sigmay_2'],color='red')
+		ax[0,1].hist(mcmc_samples['sigmay_2'],bins=150,density=True)
+		ax[0,1].axvline(args['sigmay_2'],color='red')
+		if save_plots:
+			mypath='sigma2_y.png'
 			plt.savefig(filename+mypath)
 
-	fig, ax = plt.subplots(3, 1,figsize=(5,5))
-	if 'alpha' in mcmc_samples.keys():
 
+	fig, ax = plt.subplots(3, 1,figsize=(5,5))
+	if 'alpha' in mcmc_samples.keys() and 'a_0' in mcmc_samples.keys() and 'beta' in mcmc_samples.keys():
 		ax[0].plot(mcmc_samples['a_0'],label='a_0')
 		ax[0].axhline(a_0_true,color='red',label='a_0 true')
 		ax[0].set_ylabel('a_0')
@@ -254,13 +269,12 @@ if __name__=='__main__':
 							wspace=0.4, 
 							hspace=0.4)
 		plt.legend()
-		if save_me:
+		if save_plots:
 			mypath='trace_plots_A.png'
 			plt.savefig(filename+mypath)
 
 
 	rng_key, rng_key_pred= random.split(random.PRNGKey(2))
-
 	if args_train['background']=='LGCP_only':
 		model_mcmc=spatiotemporal_LGCP_model
 		print('Inference model has background',args_train['background'])
@@ -282,9 +296,10 @@ if __name__=='__main__':
 	if args_train['background'] not in ['constant', 'Poisson']:
 		f_t_pred=predictions["f_t"]
 		f_t_pred_mean=jnp.mean(f_t_pred, axis=0)
+		print('mean ft',f_t_pred_mean.mean())
 		f_t_hpdi = hpdi(f_t_pred, 0.9)
 
-	  #f_t_hpdi.shape
+	#f_t_hpdi.shape
 	#f_t_pred_mean=jnp.mean(f_t_pred, axis=0)[0:T_train]
 	#f_t_hpdi = hpdi(f_t_pred, 0.9)[0:T_train]
 
@@ -300,29 +315,11 @@ if __name__=='__main__':
 	#print(simulated_output_Hawkes.keys(),'\n')
 	a_0_post_mean=np.array(mcmc_samples['a_0'][n_total-post_samples:n_total].mean())
 	a_0_post_samples=np.array(mcmc_samples['a_0'][n_total-post_samples:n_total])
+	print('a_0_post_mean',a_0_post_mean )
 
 
-	#if args_train['background']=='Poisson':
-	#	args_new={}
-	#	args_new['t_min']=50
-	#	args_new['t_max']=80
-	#	args_new['a_0']=a_0_post_mean
-	#	args_new['b_0']=0
-	#	args_new['t_events']=None*np.zeros(0)
-	#	args_new['xy_events']=None
-
-	#	args_prior={}
-	#	args_prior['a_0']=a_0_true
-	#	args_prior['b_0']=0
-	#	args_prior['t_events']=None
-	#	args_prior['xy_events']=None
-	#	args_prior['t_min']=50
-	#	args_prior['t_max']=80
-		#predictive = Predictive(model_mcmc, mcmc_samples)
-		#predictions = predictive(rng_key_pred, args=args_new)
-
-
-	#TRUE PARAMETERS if LGCP or if LGCP Hawkes
+	T_train=50
+	#TRUE PARAMETERS if data is LGCP or if LGCP Hawkes
 	if args['background'] in ['LGCP','LGCP_Hawkes']:
 		ft_true=simulated_output_Hawkes_background['f_t'].flatten()
 		f_xy_true=simulated_output_Hawkes_background['f_xy'].flatten()
@@ -333,9 +330,14 @@ if __name__=='__main__':
 		### PLOT
 		#ft_true=np.zeros(args_train['n_t'])
 		#f_xy_true=np.zeros(args_train['n_xy']**2)
-
-		indices_t=simulated_output_Hawkes_background['indices_t']
-	
+		indices_t=ind_t_i#simulated_output_Hawkes_background['ind_t_i']
+		indices_xy=ind_xy_i#simulated_output_Hawkes_background['ind_xy_i']
+		print('full_indices_t shape',indices_t[0].shape)
+		print('x_t shape', args_train['x_t'].shape)
+		print('full_indices_t ',indices_t)
+		
+		#indices_t=full_indices_t[0:T_train]
+		#indices_xy=full_indices_xy
 
 		rate_t_pred=np.exp(predictions['f_t'])
 		rate_t_pred_mean=jnp.mean(rate_t_pred, axis=0)
@@ -364,32 +366,35 @@ if __name__=='__main__':
 		ax[2].fill_between(args_train['x_t'], np.exp(f_t_hpdi[0]+a_0_post_mean), np.exp(f_t_hpdi[1]+a_0_post_mean), alpha=0.4, color="palegoldenrod", label="90%CI rate")
 		ax[2].legend()
 
-		if save_me:
-			mypath='f_t.png'
+		if save_plots:
+			mypath='plot_f_t.pdf'
 			plt.savefig(filename+mypath)
-
-
+			mypath='plot_f_t.png'
+			plt.savefig(filename+mypath)
 		rate_xy_pred=np.exp(predictions['f_xy'])
 		rate_xy_pred_mean=jnp.mean(rate_xy_pred, axis=0)
 		rate_xy_hpdi = hpdi(rate_xy_pred, 0.9)
 
 		f_xy_pred=predictions["f_xy"]
 		f_xy_pred_mean=jnp.mean(f_xy_pred, axis=0)
+		print('mean ft',f_xy_pred_mean.mean())
+
 		f_xy_hpdi = hpdi(f_xy_pred, 0.9)
 
 		fig, ax = plt.subplots(1,2, figsize=(10, 10))
 		#fig.show()
+        
 		_min, _max = np.amin(f_xy_pred), np.amax(f_xy_pred)
-		im = ax[0].imshow(f_xy_pred_mean.reshape(n,n), cmap='viridis', interpolation='none', extent=[0,1,0,1], origin='lower',vmin=_min, vmax=_max)
+		im = ax[0].imshow(f_xy_pred_mean.reshape(args['n_xy'],args['n_xy']), cmap='viridis', interpolation='none', extent=[0,1,0,1], origin='lower',vmin=_min, vmax=_max)
 		ax[0].title.set_text('Estimated f_xy')
 		#fig.show()
 		rate_xy_pred_norm=rate_xy_pred_mean/np.sum(rate_xy_pred)
 		_min, _max = np.amin(rate_xy_pred_norm), np.amax(rate_xy_pred_norm)
-		im = ax[1].imshow(rate_xy_pred_norm.reshape(n,n), cmap='viridis', interpolation='none', extent=[0,1,0,1], origin='lower',vmin=_min, vmax=_max)
+		im = ax[1].imshow(rate_xy_pred_norm.reshape(args['n_xy'],args['n_xy']), cmap='viridis', interpolation='none', extent=[0,1,0,1], origin='lower',vmin=_min, vmax=_max)
 		ax[1].title.set_text('Estimated normalized rate_xy')
 
-		if save_me:
-			mypath='f_xy.png'
+		if save_plots:
+			mypath='plot_f_xy.pdf'
 			plt.savefig(filename+mypath)
 
 
@@ -403,12 +408,16 @@ if __name__=='__main__':
 	if args_train['background'] not in ['LGCP_only','Poisson']:
 		alpha_post_mean=np.array(mcmc_samples['alpha'][n_total-post_samples:n_total].mean())
 		alpha_post_samples=np.array(mcmc_samples['alpha'][n_total-post_samples:n_total])
-		
+		print('alpha_post_mean',alpha_post_mean.mean())
+
 		beta_post_mean=np.array(mcmc_samples['beta'][n_total-post_samples:n_total].mean())
 		beta_post_samples=np.array(mcmc_samples['beta'][n_total-post_samples:n_total])
+		print('beta_post_mean',beta_post_mean.mean())
 
 		sigma_x_2_post_mean=np.array(mcmc_samples['sigmax_2'][n_total-post_samples:n_total].mean())
 		sigma_x_2_post_samples=np.array(mcmc_samples['sigmax_2'][n_total-post_samples:n_total])
+		print('sigma_x_2_post_mean',sigma_x_2_post_mean.mean())
+
 
 
 	def normal_dist(mean,var,num_samples=args_train["z_dim_temporal"]):
@@ -424,8 +433,83 @@ if __name__=='__main__':
 	v_t = numpyro.deterministic("v_t", decoder_nn_temporal[1](decoder_params, z_temporal['z_temporal']))
 
 
+
+	loglik_post_samples=mcmc_samples['loglik'] #total loglik
+	loglik_post_mean=loglik_post_samples.mean()
+	
+	if model_name in ['Hawkes', 'LGCP_Hawkes']:
+		l_hawkes_post_samples=mcmc_samples['l_hawkes'] #sum log intensity for excitation part
+		l_hawkes_post_mean=l_hawkes_post_samples.mean()
+		
+		ell_1_post_samples=mcmc_samples['ell_1'] # sum log intensities at all points
+		ell_1_post_mean=ell_1_post_samples.mean()
+
+		l_background_post_mean=jnp.exp(a_0_post_mean+f_t_pred_mean[ind_t_i]+f_xy_pred_mean[ind_xy_i])
+
+	if model_name == 'Poisson':
+		l_hawkes_post_mean=0
+	if model_name == 'LGCP_only':
+		I_tot_txy_post_samples=mcmc_samples['I_tot_txy'] #total loglik
+		I_tot_txy_post_mean=I_tot_txy_post_samples.mean()
+		l_hawkes_post_mean=0
+		
+
+	#
+	##exp(ell_1)=product (l_hawkes + jnp.exp(a_0+b_0+f_t_events+f_xy_events))
+	#
+	
 	#plt.plot(np.mean(mcmc_samples['z_temporal'][100:],0))
 	#plt.plot(z_temporal['z_temporal'][0])
+	T_train=50
+	#A_0[simulation_number].append(a_0_post_mean)
+	#ALPHA[simulation_number].append(alpha_post_mean)
+	#BETA[simulation_number].append(beta_post_mean)
+	#FT[simulation_number].append(f_t_pred_mean)
+	#FXY[simulation_number].append(f_xy_pred_mean)
+	PARAMS=pd.DataFrame()
+	N=len(ind_t_i)
+	PARAMS=pd.DataFrame({'a_0': np.zeros(N),'beta': np.zeros(N),'alpha': np.zeros(N), 'sigma_x_2': np.zeros(N), 'f_t':np.zeros(N), 
+	'f_xy':np.zeros(N), 'indices_t':np.zeros(N), 'indices_xy':np.zeros(N), 'l_hawkes':np.zeros(N), 'l_background':np.zeros(N), 'intensity':np.zeros(N), 'loglik':np.zeros(N) ,'ell_1':np.zeros(N),
+	 'excitation':np.zeros(N), 'background':np.zeros(N), 'estimated_lambda_inten':np.zeros(N)} )
+	#PARAMS_B=pd.DataFrame({'ft': np.zeros(T_train)})
+	#PARAMS_C=pd.DataFrame({'fxy': np.zeros(args['n_xy']**2), })
+	#'ft': np.zeros(args['n_xy']),'fxy': np.zeros(args['n_xy'])})
+
+
+	T=50
+	background, excitation, estimated_lambda_inten=lambda_txy_calculation(a_0_post_mean,alpha_post_mean,beta_post_mean,sigma_x_2_post_mean, sigma_x_2_post_mean, T, f_t_pred_mean, f_xy_pred_mean, ind_t_i, ind_xy_i, t_events_total, xy_events_total)
+
+
+	print('N',N)
+	#PARAMS['indices_t'][0:N]=ind_t_i
+	#PARAMS['indices_xy'][0:N]=ind_xy_i
+
+	#PARAMS['l_hawkes'][0:N]=l_hawkes_post_mean
+	#PARAMS['l_background'][0:N]=l_background_post_mean
+	#PARAMS['intensity']=l_hawkes_post_mean+l_background_post_mean
+
+	#PARAMS['loglik']=loglik_post_mean
+	#PARAMS['ell_1']=ell_1_post_mean
+	
+
+	PARAMS['a_0']=a_0_post_mean; 
+	PARAMS['alpha']=alpha_post_mean; 
+	PARAMS['beta']=beta_post_mean; 
+	PARAMS['sigmax_2']=sigma_x_2_post_mean; 
+	PARAMS['background']=background; 
+	PARAMS['excitation']=excitation; 
+	PARAMS['estimated_lambda_inten']=estimated_lambda_inten; 
+	
+	
+	#PARAMS['f_t'][0:50]=f_t_pred_mean; 
+	print('BACKGROUND',args['background'])
+	#if args['background'] in ['LGCP', 'LGCP_only']:
+#		PARAMS['indices_t']=indices_t#
+#		PARAMS['indices_xy']=indices_xy
+	#PARAMS['f_xy']=f_xy_pred_mean; 
+	
+	PARAMS.to_pickle(filename+'PARAMS_'+str(simulation_number)+'.pkl')  
+	#print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
 
 
 	if calculate_error:
@@ -500,11 +584,12 @@ if __name__=='__main__':
 		if args_train['background'] not in ['constant','Poisson']:
 			GP_predictive = Predictive(sample_GP, num_samples=n_pred)
 			GP_predictive_samples = GP_predictive(rng_key, args_test, 'post')
-			if save_me:
+			if save_plots:
 				mypath='GPt_post_test.png'
 				plt.savefig(filename+mypath)
 
-			f_xy_post_mean=GP_predictive_samples['f_xy'][0]
+			f_xy_pred_mean=GP_predictive_samples['f_xy'][0]
+			f_xy_post_mean=f_xy_pred_mean
 			#f_xy_post_di = hpdi(f_xy_post, 0.9)
 
 			fig, ax = plt.subplots(1,1, figsize=(10, 5))
@@ -513,7 +598,7 @@ if __name__=='__main__':
 			im = ax.imshow(f_xy_post_mean.reshape(n,n), cmap='viridis', interpolation='none', extent=[0,1,0,1], origin='lower',vmin=_min, vmax=_max)
 			ax.title.set_text('Predictive test f_xy')
 			fig.colorbar(im, ax=ax)
-			if save_me:
+			if save_plots:
 				mypath='GPxy_post_test.png'
 				plt.savefig(filename+mypath)
 
@@ -535,6 +620,7 @@ if __name__=='__main__':
 		lambda_0_post_samples=np.exp(a_0_post_samples)
 		lambda_0_post_mean=lambda_0_post_samples.mean()
 
+
 		args_test['x_t']=np.arange(50,80,1)
 
 		#
@@ -542,10 +628,12 @@ if __name__=='__main__':
 		#
 
 		post_mean=True ## always use this ie the posterior mean
-
-		if args_train['background'] in ['LGCP_only', 'LGCP']:
+		print('model name', model_name)
+		if model_name in ['LGCP_only', 'LGCP_Hawkes']:
 			f_t_pred_mean=jnp.array(np.mean(GP_predictive_samples['f_t'][:,:],0));
+			print('shape of ft', f_t_pred_mean.shape)
 			f_xy_pred_mean=np.mean(GP_predictive_samples['f_xy'],0);
+			print('shape of fxy', f_xy_pred_mean.shape)
 
 
 		x_min, x_max, y_min, y_max=0,1,0,1
@@ -775,11 +863,10 @@ if __name__=='__main__':
 			#ERROR['ED_mean_space_'+str(n_stop)]=ErrorD_space; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
 			#ERROR['ED_std_space_'+str(n_stop)]=np.std(ErrorD_space); #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
 			
-		save_me=True
+		save_error=True
 		print('T test from original data sequence', simulated_output_Hawkes_train_test['G_tot_t_test'][0,:n_stop],'\n')
 		print('T estimated', PREDICTIONS['T'][0,:n_stop],'\n')
 
-		if save_me:
+		if save_error:
 			print('Saving data in', filename+'ERROR_'+str(simulation_number)+'.pkl')
-
-		ERROR.to_pickle(filename+'ERROR_'+str(simulation_number)+'.pkl')  # where to save it, usually as a .pkl
+			ERROR.to_pickle(filename+'ERROR_'+str(simulation_number)+'.pkl')  # where to save it, usually as a .pkl

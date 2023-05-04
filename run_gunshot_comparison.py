@@ -32,7 +32,7 @@ import pickle
 import jax
 import jax.numpy as jnp
 from jax import random, lax, jit, ops
-from jax.experimental import stax
+from jax.example_libraries import stax
 
 from functools import partial
 
@@ -141,6 +141,9 @@ args_train["gp_kernel"]=exp_sq_kernel
 args_train["batch_size"]= 1
 
 train_ind=indices_train
+print('train_ind length', train_ind.shape)
+print('train_ind sum', train_ind.sum())
+
 n_train=train_ind.sum()
 n_obs=np.sum(indices)
 print('n_train', n_train, 'n_obs', n_obs, 'n_test points', n_obs-n_train)
@@ -167,19 +170,22 @@ data_train_test['G_tot_y_test']=df[indices_test]['Y']
 #
 #INFERENCE
 
-args_train['background']='LGCP'
-model_folder='model_LGCP_Hawkes/'
+#args_train['background']='LGCP'
+#model_folder='model_LGCP_Hawkes/'
+#model_name='LGCP_Hawkes'
+
+#model_folder='model_Hawkes/'
+#args_train['background']='constant'
+#model_name='Hawkes'
+
 
 #args_train['background']='Poisson'
 #model_folder='model_Poisson/'
+#model_name='Poisson'
 
-#args_train['background']='constant'
-#model_folder='model_Hawkes/'
-
-#args_train['background']='LGCP_only'
-#model_folder='model_LGCP/'
-
-
+args_train['background']='LGCP_only'
+model_folder='model_LGCP/'
+model_name='LGCP'
 
 #@title
 if args_train['background']!='constant':
@@ -190,7 +196,7 @@ if args_train['background']!='constant':
   n_xy=25
 #@title
 if args_train['background']!='constant':
-  # spatial VAE training
+  # spatial VAE training#
 
 	args_train["hidden_dim_temporal"]= 50
 	args_train["z_dim_temporal"]= 20
@@ -270,16 +276,15 @@ xy_events_total=np.array((x_events_total,y_events_total)).transpose()
 
 
 #### MCMC inference
-print(T_test)
-print(T_train)
 
-args_train["num_warmup"]= 100
-args_train["num_samples"] =500
-args_train["num_chains"] =1
+args_train["num_warmup"]= 2000
+args_train["num_samples"] =2000
+args_train["num_chains"] =2
 args_train["thinning"] =1
 
 
 args_train["t_events"]=t_events_total
+n_train=t_events_total.size
 args_train["xy_events"]=xy_events_total.transpose()
 
 
@@ -316,7 +321,7 @@ if args_train['background']=='Poisson':
 
 
 # inference
-run_inference=True
+run_inference=False
 if run_inference:
   tic = time.time()
   mcmc = run_mcmc(rng_key_post, model_mcmc, args_train)
@@ -345,14 +350,22 @@ if not(run_inference):
   filename='output/'+data_folder+model_folder
   import dill
   print('output/'+data_folder+model_folder)
-  with open(filename+'output2.pkl', 'rb') as handle:
-    dill.load(output_dict, handle)
-  output_dict = {}
+  with open(filename+'output.pkl', 'rb') as handle:
+    output_dict=dill.load(handle)
   #output_dict['model']=spatiotemporal_hawkes_model
   #output_dict['guide']=guide
   mcmc_samples=output_dict['samples']
   mcmc=output_dict['mcmc']
 
+
+num_train=train_ind.sum()
+print('MEAN LOGLIK', np.mean(mcmc_samples['loglik']))
+print('STDEV LOGLIK', np.std(mcmc_samples['loglik']))
+
+print('MEAN Negative normalised LOGLIK', -np.mean(mcmc_samples['loglik'])/num_train)
+print('STDEV egative normalised  LOGLIK', -np.std(mcmc_samples['loglik'])/num_train)
+
+  
 
 
 fig, ax = plt.subplots(1, 2,figsize=(15,5))
@@ -362,7 +375,7 @@ if 'alpha' in mcmc_samples.keys():
   #ax[0].axhline(alpha,color='red')
   ax[1].hist(mcmc_samples['alpha'],bins=150,density=True)
 if save_me:
-  mypath='alpha.png'
+  mypath='alpha.pdf'
   plt.savefig(filename+mypath)
 
 
@@ -373,7 +386,7 @@ if 'beta' in mcmc_samples.keys():
   #ax[0].axhline(alpha,color='red')
   ax[1].hist(mcmc_samples['beta'],bins=150,density=True)
 if save_me:
-  mypath='beta.png'
+  mypath='beta.pdf'
   plt.savefig(filename+mypath)
 
 
@@ -393,7 +406,7 @@ if 'sigmax_2' in mcmc_samples.keys():
   ax[1,1].set_ylabel('sigma')
 
   if save_me:
-    mypath='trace_plots.png'
+    mypath='trace_plots.pdf'
     plt.savefig(filename+mypath)
 
 fig, ax = plt.subplots(3, 1,figsize=(5,5))
@@ -416,7 +429,7 @@ if 'alpha' in mcmc_samples.keys():
                       hspace=0.4)
   plt.legend()
   if save_me:
-    mypath='trace_plots_A.png'
+    mypath='trace_plots_A.pdf'
     plt.savefig(filename+mypath)
 
 
@@ -470,7 +483,7 @@ if args_train['background'] in ['LGCP','LGCP_only']:
   ax[2].legend()
 
   if save_me:
-    mypath='f_t.png'
+    mypath='f_t.pdf'
     plt.savefig(filename+mypath)
 
     
@@ -500,7 +513,7 @@ if args_train['background'] in ['LGCP','LGCP_only']:
 
 
   if save_me:
-    mypath='f_xy.png'
+    mypath='f_xy.pdf'
     plt.savefig(filename+mypath)
 
 
@@ -542,25 +555,49 @@ if args_train['background'] in ['LGCP','LGCP_only']:
 
 
   if save_me:
-    mypath='f_xy_and_true.png'
+    mypath='f_xy_and_true.pdf'
     plt.savefig(filename+mypath)
 
 
 
-fig, ax = plt.subplots(1, 1,figsize=(5,5))
+fig, ax = plt.subplots(1, 1,figsize=(10,5))
 ax.plot(mcmc_samples['loglik'])
+ax.set_xlabel('MCMC iterations')
+#ax.set_ylim((0,6))
+#ax.set_ylim((2500,3500))
+ax.xaxis.label.set_fontsize(20)
+ax.set_ylabel('loglik')
+ax.yaxis.label.set_fontsize(20)
+if save_me:
+  mypath=model_name+'_loglik'
+  plt.savefig(filename+mypath +'.pdf')
+  plt.savefig(filename+mypath +'.eps')
+
+fig, ax = plt.subplots(1, 1,figsize=(10,5))
+ax.plot(mcmc_samples['loglik']/n_train)
+ax.set_ylabel('norm loglik')
+ax.set_xlabel('MCMC iterations')
+#ax.set_ylim((0,6))
+#ax.set_ylim((2500,3500))
+ax.xaxis.label.set_fontsize(20)
+ax.yaxis.label.set_fontsize(20)
+if save_me:
+  mypath=model_name+'_loglik_norm'
+  plt.savefig(filename+mypath+'.pdf')
+  plt.savefig(filename+mypath+'.pdf')
+
+
 print('The mean train LOGLIKELIHOOD is ',mcmc_samples['loglik'].mean(), 'for model with background', args_train['background'], 'run with function', model_mcmc)
 LOGLIK_TRAIN=mcmc_samples['loglik'].mean()
 
-if save_me:
-  mypath='loglik.png'
-  plt.savefig(filename+mypath)
-  mypath='loglik.eps'
-  plt.savefig(filename+mypath)
-  
+
+
+
+
+
+
+
 #### PREDICTION OF FUTURE EVENTS and evaluation of loglikelihood 
-
-
 n_total=int(args_train['num_samples']/args_train['thinning']*args_train['num_chains'])
 n_total
 
@@ -578,7 +615,7 @@ if args_train['background'] in ['LGCP','constant']:# ie in hawkes case
 
   sigma_x_2_post_mean=np.array(mcmc_samples['sigmax_2'][n_total-post_samples:n_total].mean())
   sigma_x_2_post_samples=np.array(mcmc_samples['sigmax_2'][n_total-post_samples:n_total])
-  LOGLIK_TEST=0
+  #LOGLIK_TEST=0
 
 
 
@@ -608,7 +645,7 @@ args_test['n_xy']=args['n_xy']
 args_test['x_xy']=args['x_xy']
 args_test['a_0']=a_0_post_mean
 
-if args_train['background'] in ['LGCP','LGCP_only','LGCP_Hawkes']:
+if args_train['background'] in ['LGCP','LGCP_only']:
   args_test['hidden_dim_temporal']=args_train["hidden_dim_temporal"]
   args_test['z_dim_temporal']=args_train["z_dim_temporal"]
   args_test['decoder_params_temporal']=args_train["decoder_params_temporal"]
@@ -629,12 +666,12 @@ if args_train['background'] in ['LGCP','LGCP_only','LGCP_Hawkes']:
 
   #plt.plot(np.exp(GP_predictive_samples['f_t'][0]+a_0_post_mean))
   #plt.hist(simulated_output_Hawkes['G_tot_t'][0])
-  plt.plot(GP_predictive_samples['f_t'][0])
+  #plt.plot(GP_predictive_samples['f_t'][0])
   
   if save_me:
     mypath='GPt_post_test.eps'
     plt.savefig(filename+mypath)
-    mypath='GPt_post_test.png'
+    mypath='GPt_post_test.pdf'
     plt.savefig(filename+mypath)
 
   f_xy_post_mean=GP_predictive_samples['f_xy'][0]
@@ -649,7 +686,7 @@ if args_train['background'] in ['LGCP','LGCP_only','LGCP_Hawkes']:
   if save_me:
     mypath='GPxy_post_test.eps'
     plt.savefig(filename+mypath)
-    mypath='GPxy_post_test.png'
+    mypath='GPxy_post_test.pdf'
     plt.savefig(filename+mypath)
 
 if args_train['background'] in ['LGCP','LGCP_only']:
@@ -658,7 +695,8 @@ if args_train['background'] in ['LGCP','LGCP_only']:
 
 past_times=t_events_total
 past_locs=xy_events_total.transpose()
-n_test=n_obs-n_train;print(n_test)
+n_test=n_obs-n_train;
+print('n test is', n_test, '\n')
 N_new=n_test
 
 lambda_0_post_samples=np.exp(a_0_post_samples);
@@ -666,10 +704,8 @@ lambda_0_post_mean=lambda_0_post_samples.mean()
 
 args_test['x_t']=np.arange(50,80,1)
 
+
 post_mean=True
-
-
-
 if args_train['background']=='Poisson':
   post_samples=100
   a_0_post_mean=np.array(mcmc_samples['a_0'][n_total-post_samples:n_total].mean())
@@ -688,13 +724,16 @@ if args_train['background']=='Poisson':
   args_prior['xy_events']=None
   args_prior['t_min']=50
   args_prior['t_max']=80
-  #loglik_test=a_0_post_mean*n_test-jnp.exp(a_0_post_samples)*(args_prior['t_max']-args_prior['t_min'])
-  #LOGLIK_TEST[j]=a_0_post_samples*n_test-jnp.exp(a_0_post_samples)*(args_prior['t_max']-args_prior['t_min'])
+  loglik_test=a_0_post_mean*n_test-jnp.exp(a_0_post_samples)*(args_prior['t_max']-args_prior['t_min'])
+  print('loglik_test',loglik_test)
+  LOGLIK_TEST=loglik_test#a_0_post_samples*n_test-jnp.exp(a_0_post_samples)*(args_prior['t_max']-args_prior['t_min'])
   
-if args_train['background'] in ['LGCP','LGCP_only','LGCP_Hawkes']:
+if args_train['background'] in ['LGCP','LGCP_only']:
   f_t_pred_mean=np.mean(GP_predictive_samples['f_t'],0)
+  #print('GP_predictive_samples[f_t]', GP_predictive_samples['f_t'].shape)
   f_xy_pred_mean=np.mean(GP_predictive_samples['f_xy'],0)
- 
+  #print('GP_predictive_samples[f_xy]', GP_predictive_samples['f_xy'].shape)
+
 #
 n_simul=100
 
@@ -703,24 +742,19 @@ if simulate_predictions:
 
   PREDICTIONS={};
   PREDICTIONS['T']=np.zeros((n_simul,n_test));PREDICTIONS['X']=np.zeros((n_simul,n_test));PREDICTIONS['Y']=np.zeros((n_simul,n_test))
-  LOGLIK_TEST=np.zeros((n_simul,2))
+  LOGLIK_TEST=np.zeros((n_simul))
 
-  if args_train['background'] in ['LGCP','LGCP_only']:
+  if args_train['background'] in ['LGCP_only']:
     rng_key, rng_key_predict = random.split(random.PRNGKey(2))
-    #gp_predictive = Predictive(spatiotemporal_GP, num_samples=n_simul)
-    print(T/n_t,'\n\n')
-    #GP_prior_samples = gp_predictive(rng_key_predict, args['T'], args['x_t'], args['x_xy'], gp_kernel=exp_sq_kernel, jitter=1e-5, a_0=0, b_0=0,  var_t=1, length_t=10, var_xy=1, length_xy=.25)
-
 
   for j in range(0,n_simul):
-    if j%10 ==0:
+    if j%50 ==0:
       print('sample',j)
       #simulate from the underlying process 
     if args_train['background']=='LGCP':
       print('predicting from LGCP-HAWKES')
 
       if post_mean:
-        print(T_train)
         T_pred, X_pred, Y_pred, T_pred_all,X_pred_all,Y_pred_all=simulate_spatiotemporal_hawkes_predictions(past_times, 
           past_locs, N_new,  args['x_min'], args['x_max'], args['y_min'], args['y_max'], lambda_0_post_mean, alpha_post_mean, beta_post_mean, sigma_x_2_post_mean, 
           GP_predictive_samples['Itot_xy'][0], args_train['background'], f_t_pred_mean)   
@@ -737,28 +771,55 @@ if simulate_predictions:
       args_test['a_0']=np.log(lambda_0_post_mean)
       args_test['sigmax_2']=sigma_x_2_post_mean
       args_test['sigmay_2']=sigma_x_2_post_mean
-      args['t_events']=T_pred
-      args['xy_events']=np.array((X_pred,Y_pred))
-      Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=1)
-      Hawkes_likelihood=Hawkes_lik_predictive(rng_key, args_test)
-      LOGLIK_TEST[j,1]=Hawkes_likelihood['loglik']
+      #args['t_events']=T_pred
+      #args['xy_events']=np.array((X_pred,Y_pred))
+      #Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=1)
+      #Hawkes_likelihood=Hawkes_lik_predictive(rng_key, args_test)
+      #LOGLIK_TEST[j,1]=Hawkes_likelihood['loglik']
+      XY_pred_all=np.array((X_pred_all,Y_pred_all));#print('XY_pred.size',XY_pred.shape)
+      XY_pred=np.array((X_pred,Y_pred));#print('XY_pred.size',XY_pred.shape)
+      
+      args_test['T_test']=80
+      args_test['T_train']=50
+      args_test['x_t']=np.arange(args_test['T_train'],args_test['T_test'],1)
+      ind_t_i=find_index_b(T_pred, args_test['x_t'])	 
+      ind_xy_i=find_index_b(XY_pred.transpose(), args['x_xy'])
+
+      #ind_t_i=find_index_b(T_pred_all, args['x_t'])	 
+      #ind_xy_i=find_index_b(XY_pred_all.transpose(), args['x_xy'])
+      args_test['t_events']=T_pred_all
+      args_test['xy_events']=XY_pred_all
+      #ind_t_i=find_index_b(T_pred_all, args['x_t'])	 
+      #ind_xy_i=find_index_b(XY_pred_all.transpose(), args['x_xy'])
+      args_test['indices_t']=ind_t_i
+      args_test['indices_xy']=ind_xy_i	
+      if args_test['background']=='LGCP':
+        args_test['f_t']=f_t_pred_mean
+        args_test['f_xy']=f_xy_pred_mean
+
+      args['partial_index']=np.arange(num_train,n_obs,1)
+      #print('shape of mean f',f_t_pred_mean.shape)		
+      #print('shape of mean f',f_xy_pred_mean.shape)		
+      			
+      Hawkes_lik_predictive = Predictive(Hawkes_likelihood_test, num_samples=1)
+      Hawkes_lik = Hawkes_lik_predictive(rng_key, args_test)
+      #print(HK['loglik'])
+      LOGLIK_TEST[j]=Hawkes_lik['loglik']	
 
 
     elif args_train['background']=='Poisson':
-        ST_background_predictive = Predictive(spatiotemporal_homogenous_poisson, num_samples=args["batch_size"])
-        simulated_output_background = ST_background_predictive(rng_key_predict,args_new)
-        n_obs_back=simulated_output_background['N']
-        T_pred=np.sort(simulated_output_background['t_events'])[0,0:n_test]
-        X_pred=simulated_output_background['xy_events'][0,0:n_test,0]
-        Y_pred=simulated_output_background['xy_events'][0,:n_test,1]  
-        ###loglikelihood
-        print(T_test)
-        print(args_test['T'])
-        LOGLIK_TEST[j,0]=a_0_post_samples[j]*n_test-jnp.exp(a_0_post_samples[j])*(T_test-T_train)
-        LOGLIK_TEST[j,1]=a_0_post_mean*n_test-jnp.exp(a_0_post_mean)*(T_test-T_train)
-        
+      print('prediciting from Poisson')
+      ST_background_predictive = Predictive(spatiotemporal_homogenous_poisson, num_samples=args["batch_size"])
+      simulated_output_background = ST_background_predictive(rng_key_predict,args_new)
+      n_obs_back=simulated_output_background['N']
+      T_pred=np.sort(simulated_output_background['t_events'])[0,0:n_test]
+      X_pred=simulated_output_background['xy_events'][0,0:n_test,0]
+      Y_pred=simulated_output_background['xy_events'][0,:n_test,1]  
+      ###loglikelihood
+      LOGLIK_TEST[j]=a_0_post_samples[j]*n_test-jnp.exp(a_0_post_samples[j])*(T_test-T_train)
+      #LOGLIK_TEST[j]=a_0_post_mean*n_test-jnp.exp(a_0_post_mean)*(T_test-T_train)
+      
 
-    
     elif args_train['background']=='constant':
       if post_mean:
         T_pred, X_pred, Y_pred, T_pred_all, X_pred_all, Y_pred_all=simulate_spatiotemporal_hawkes_predictions(past_times, 
@@ -777,21 +838,36 @@ if simulate_predictions:
       args_test['a_0']=np.log(lambda_0_post_mean)
       args_test['sigmax_2']=sigma_x_2_post_mean
       args_test['sigmay_2']=sigma_x_2_post_mean
-      args_test['t_events']=T_pred
-      args_test['xy_events']=np.array((X_pred,Y_pred))
-      Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=1)
-      Hawkes_lik=Hawkes_lik_predictive(rng_key, args_test)
-      LOGLIK_TEST[j,1]=Hawkes_lik['loglik']
 
+      XY_pred_all=np.array((X_pred_all,Y_pred_all));#print('XY_pred.size',XY_pred.shape)
+      ind_t_i=find_index_b(T_pred_all, args['x_t'])	 
+      ind_xy_i=find_index_b(XY_pred_all.transpose(), args['x_xy'])
+      args_test['t_events']=T_pred_all
+      args_test['xy_events']=XY_pred_all
+      args_test['indices_t']=ind_t_i
+      args_test['indices_xy']=ind_xy_i	
+      args['n_train']=num_train
+      args['partial_index']=np.arange(num_train,n_obs,1)
+      args_test['T_test']=80
+      args_test['T_train']=50
+      if args_test['background']=='LGCP':
+        args_test['f_t']=f_t_pred_mean
+        args_test['f_xy']=f_xy_pred_mean								
+      Hawkes_lik_predictive = Predictive(Hawkes_likelihood_test, num_samples=1)
+      Hawkes_lik = Hawkes_lik_predictive(rng_key, args_test)
+      #print(HK['loglik'])
+      LOGLIK_TEST[j]=Hawkes_lik['loglik']	
       
-
         
     elif args_train['background']=='LGCP_only':
       if post_mean:
         N_0=n_test
         ind_t_i, t_i, rate_t_i=rej_sampling_new(N_0, np.arange(args_train['T'], T_test,1), lambda_0_post_mean*np.exp(f_t_pred_mean[T_train:]), 30)
+        #print('ind_t_i', ind_t_i.shape)
         N_0 = t_i.shape[0]
-        ind_xy_i, xy_i, rate_xy_i=rej_sampling_new(N_0, args['x_xy'], GP_predictive_samples['rate_xy'][j,:], args['n_xy']**2)
+        ind_xy_i, xy_i, rate_xy_i=rej_sampling_new(N_0, args['x_xy'], f_xy_pred_mean, args['n_xy']**2)
+        #print('ind_xy_i', ind_xy_i.shape)
+        
         ord=t_i.sort()
         T_pred=t_i[ord].flatten()
         X_pred=xy_i[:,0][ord].flatten()
@@ -799,6 +875,17 @@ if simulate_predictions:
         T_pred_all=np.concatenate((past_times,T_pred.flatten()))
         X_pred_all=np.concatenate((past_locs[0],X_pred.flatten()))
         Y_pred_all=np.concatenate((past_locs[1],Y_pred.flatten()))
+
+        ###loglikelihood
+        #print('args_train[T]',args_train['T'])
+        Itot_t=jnp.sum(jnp.exp(f_t_pred_mean[args_train['T']:]))#/args["n_t"]*(T_test-T_train)
+        Itot_xy=jnp.sum(jnp.exp(f_xy_pred_mean))/args_train["n_xy"]**2
+        #print('f_t_pred_mean[T_train:][ind_t_i]', f_t_pred_mean[T_train:][ind_t_i].size)
+        #print('f_xy_pred_mean[ind_xy_i]', f_xy_pred_mean[ind_xy_i].size)
+        #print('a_0_post_mean',a_0_post_mean)
+        LOGLIK_TEST[j]=np.sum(f_t_pred_mean[T_train:][ind_t_i]+f_xy_pred_mean[ind_xy_i]+a_0_post_mean)-Itot_xy*Itot_t*lambda_0_post_mean
+
+
       else:
         N_0=n_test
         ind_t_i, t_i, rate_t_i=rej_sampling_new(N_0, np.arange(args_train['T'], T_test,1), lambda_0_post_samples[j]*np.exp(GP_predictive_samples['f_t'][j][args_train['T']:]), 30)
@@ -811,15 +898,9 @@ if simulate_predictions:
         #T_pred_all=np.concatenate((past_times,T_pred.flatten()))
         #X_pred_all=np.concatenate((past_locs[0],X_pred.flatten()))
         #Y_pred_all=np.concatenate((past_locs[1],Y_pred.flatten()))
-      
-      ###loglikelihood
-      Itot_t=jnp.sum(jnp.exp(GP_predictive_samples['f_t'][j][args_train['T']:]))/args["n_t"]*(T_test-T_train)
-      Itot_xy=jnp.sum(jnp.exp(GP_predictive_samples['f_xy'][j]))/args_train["n_xy"]**2
-      LOGLIK_TEST[j,0]=Itot_xy*Itot_t*lambda_0_post_mean
-
-      Itot_t_mean=jnp.sum(jnp.exp(f_t_pred_mean[args_train['T']:]))/args["n_t"]*(T_test-T_train)
-      Itot_xy_mean=jnp.sum(jnp.exp(f_xy_pred_mean['f_xy']))/args_train["n_xy"]**2
-      LOGLIK_TEST[j,0]=Itot_t_mean*Itot_xy_mean*lambda_0_post_samples[j]
+        Itot_t_mean=jnp.sum(jnp.exp(f_t_pred_mean[args_train['T']:]))/args["n_t"]*(T_test-T_train)
+        Itot_xy_mean=jnp.sum(jnp.exp(f_xy_pred_mean))/args_train["n_xy"]**2
+        LOGLIK_TEST[j]=np.sum(GP_predictive_samples['f_t'][T_train:][ind_t_i]+GP_predictive_samples['f_xy'][ind_xy_i]+a_0_post_mean)-Itot_t_mean*Itot_xy_mean*lambda_0_post_samples[j]
       
     
     len_t=T_pred.size
@@ -832,9 +913,7 @@ if simulate_predictions:
 
     
   min_y_test=df['Y'][indices_test].min()
-  print(min_y_test)
   max_y_test=(df['Y'][indices_test]-df['Y'][indices_test].min()).to_numpy().max()
-  print(max_y_test);print(max_y)
 
 
   #### this is mapping we want
@@ -849,6 +928,7 @@ if simulate_predictions:
   PREDICTIONS_SCALED['Y']=PREDICTIONS['Y']*max_y_test+min_y_test
 
 
+  print('n_train',n_train)
   ErrorA=np.zeros(n_simul);ErrorA_t=np.zeros(n_simul);ErrorA_xy=np.zeros(n_simul)
   fig,ax=plt.subplots()
   DIFF=np.zeros(n_simul)
@@ -877,17 +957,25 @@ if simulate_predictions:
 
 
 print('Loglikelihood train set is\n', LOGLIK_TRAIN)
+print('St dev of Loglikelihood train set is\n', np.std(LOGLIK_TRAIN))
+
 print('Loglikelihood test set is\n', LOGLIK_TEST.mean(), 'with std',  np.std(LOGLIK_TEST)/np.sqrt(n_simul), '\n')
-print('train_runtime', train_runtime)
+#print('train_runtime', train_runtime)
+print('negative normalised Loglikelihood test set is\n', -LOGLIK_TEST.mean()/n_test, 'with std',  np.std(LOGLIK_TEST/n_stop)/np.sqrt(n_simul), '\n')
 
 
 filename='output/'+data_folder+model_folder+"/output.txt"
 f = open(filename, "a")
-print("train_runtime!",train_runtime, file=f)
+#print("train_runtime!",train_runtime, file=f)
 print("Loglikelihood test set.",LOGLIK_TEST, file=f)
-print("Loglikelihood test set mean",LOGLIK_TEST[:,0].mean(), file=f)
-print("Loglikelihood test set standard error",np.std(LOGLIK_TEST[:,0])/np.sqrt(n_simul), file=f)
-print("Loglikelihood test set mean B",LOGLIK_TEST[:,1].mean(), file=f)
+print("Loglikelihood test set mean",LOGLIK_TEST.mean(), file=f)
+print("Loglikelihood test set standard error",np.std(LOGLIK_TEST)/np.sqrt(n_simul), file=f)
+print("Loglikelihood test set mean B",LOGLIK_TEST.mean(), file=f)
+
+print("negative normalised Loglikelihood test set mean",-LOGLIK_TEST.mean()/n_test, file=f)
+print("negative normalised Loglikelihood test set standard error",np.std(LOGLIK_TEST)/n_test/np.sqrt(n_simul), file=f)
+
+
 print("------------------------------------", file=f)
 f.close()
 

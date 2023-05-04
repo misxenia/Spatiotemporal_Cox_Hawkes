@@ -170,6 +170,11 @@ def difference_matrix(a):
     x2trial=jnp.tril(x2)
     return x2trial
 
+def difference_matrix_partial(a,partial_index):
+    x = jnp.reshape(a, (len(a), 1))
+    x2= x[partial_index]- x.transpose()
+    x2trial=jnp.tril(x2)
+    return x2trial
 
 def sq_diff(a,b):
   return np.sum((a-b)**2)

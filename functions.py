@@ -21,6 +21,10 @@ from numpyro import optim
 from numpyro.diagnostics import hpdi
 from random import randint
 
+
+import scipy.stats as stats
+import pylab 
+
 import sys
 
 from utils import exp_sq_kernel, find_index
@@ -456,6 +460,42 @@ def rej_sampling_new(N, grid, gp_function, n):
   return jnp.array(index[indices][0:N]), accepted_points, accepted_f
 
 
+
+def check_simulation(lambda_inten,event_times):
+    N=event_times.size
+    #numerical way to compute the cdf ie the integral
+    integ_inten=[np.trapz(lambda_inten[i:i+2],event_times[i:i+2]) for i in range(0,N-2)]
+    #integ_inten2=[lambda_inten[i]*(event_times[i+1]-event_times[i]) for i in range(N-1)]
+    #QQ plot
+    stats.probplot(integ_inten, dist="expon", plot=pylab)
+    pylab.show()
+    
+## calculate intensity
+#lambda(t)=mu_0+sum alpha e^{-beta*(t-t_i)}
+#lambda(t)=mu_0exp(f(t)+sum alpha e^{-beta*(t-t_i)}
+
+def lambda_t_calculation_M4(mu_0,alpha,beta,T, event_times):
+    if event_times[0]>0:
+        event_times=np.concatenate(([0],event_times))
+    N=len(event_times)
+    A_new=np.ones(N);inten=np.zeros(N)
+    for i in range(1,N):
+        A_new[i]=np.exp(-beta*(event_times[i]-event_times[i-1]))*(A_new[i-1]+alpha)
+        inten[i]=A_new[i]+mu_0
+    return event_times,inten
+
+def lambda_t_calculation(mu_0,alpha,beta,T,back_t,back_ft,const_A, const_B, event_times):
+    if event_times[0]>0:
+        event_times=np.concatenate(([0],event_times))
+    N=len(event_times)
+    A_new=np.ones(N);inten=A_new
+    for i in range(1,N):
+        A_new[i]=np.exp(-beta*(event_times[i]-event_times[i-1]))*(A_new[i-1]+alpha*const_B)
+        idx = (np.abs(back_t-event_times[i])).argmin()
+        inten[i]=A_new[i]+mu_0*np.exp(back_ft[idx])*const_A
+    return event_times,inten,A_new
+
+
 def lambda_S(nu_0, const_S, alpha,beta,t,event_times):
     #nu_0=exp(a_0)
     #nu_0=exp(a_0+f(t))integ_back_xy
@@ -586,4 +626,31 @@ def simulate_spatiotemporal_hawkes_predictions(past_times, past_locs, N_new, x_m
       
     return event_times[N_past:], event_spatial_X[N_past:],event_spatial_Y[N_past:], event_times, event_spatial_X, event_spatial_Y
 
+
+
+def lambda_txy_calculation(a_0,alpha,beta,sigma_x2, sigma_y2, T,back_ft,back_fxy, indices_t, indices_xy, t_events, xy_events):
+  termB=0
+  x_events=xy_events[0,:]
+  y_events=xy_events[1,:];print(y_events.shape)
+  N=indices_t.size
+  excitation=np.zeros(N)
+  background=np.exp(back_ft[indices_t]+back_fxy[indices_xy]+a_0);
+
+  for i in range(N):
+    #print('inten for event ',i)
+    t=t_events[i]
+    if t==0:
+          term=0#np.sum(termA*termB);print(term)
+    else:
+      ind=t_events<t
+
+      termA=alpha*np.exp(-beta*(t-t_events[ind]));
+      x=x_events[i]
+      y=y_events[i]
+      termB=np.exp(-(x-x_events[ind])**2/(2*sigma_x2)-(y-y_events[ind])**2/(2*sigma_y2))/(2*np.pi*sigma_x2);
+      term=np.sum(termA*termB);
+      
+    excitation[i]=term
+  inten=excitation+background
+  return background, excitation, inten
 

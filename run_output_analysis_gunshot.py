@@ -14,7 +14,7 @@ import pickle
 import jax
 import jax.numpy as jnp
 from jax import random, lax, jit, ops
-from jax.experimental import stax
+from jax.example_libraries import stax
 
 from functools import partial
 
@@ -51,6 +51,8 @@ ax.set_xlabel('month')
 filename='output/gunfire_2013/model_LGCP_Hawkes'
 mypath='temporal_map.png'
 plt.savefig(filename+mypath)
+mypath='temporal_map.pdf'
+plt.savefig(filename+mypath)
 
 plt.plot(df[indices]['X'], df[indices]['Y'],'x',alpha=.4)
 plt.xlabel('x')
@@ -59,6 +61,8 @@ filename='output/gunfire_2013/'
 mypath='spatial_map.png'
 plt.savefig(filename+mypath)
 
+mypath='spatial_map.pdf'
+plt.savefig(filename+mypath)
 
 
 # args for exponential time kernel and gaussian spatial kernel
@@ -160,6 +164,8 @@ for i in range(3):
 if save_me:
   mypath='trace_plots_part_A.png'
   plt.savefig(filename+mypath)
+  mypath='trace_plots_part_A.pdf'
+  plt.savefig(filename+mypath)
 
 fig, ax = plt.subplots(2, 1,figsize=(8,5), sharex=True, sharey=True)
 
@@ -183,6 +189,8 @@ if save_me:
   mypath='trace_plots_part_B.png'
   plt.savefig(filename+mypath)
   
+  mypath='trace_plots_part_B.pdf'
+  plt.savefig(filename+mypath)
 
 
 fig, ax = plt.subplots(5, 1,figsize=(8,14), sharex=True)
@@ -211,7 +219,7 @@ for i in range(5):
         item.set_fontsize(15)
 
 if save_me:
-  mypath='trace_plots_all.png'
+  mypath='trace_plots_all.pdf'
   plt.savefig(filename+mypath)
 
 
@@ -247,7 +255,7 @@ for i in range(5):
 
 plt.show()
 if save_me:
-  mypath='trace_plots_all_hist.png'
+  mypath='trace_plots_all_hist.pdf'
   plt.savefig(filename+mypath)
 
 

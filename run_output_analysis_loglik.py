@@ -326,7 +326,7 @@ if __name__=='__main__':
 
 
 	#post_samples=500
-	print('n_total',n_total,'\n\n')
+	#print('n_total',n_total,'\n\n')
 	#print('post_samples', post_samples,'\n')
 	
 	a_0_post_mean=np.array(mcmc_samples['a_0'][n_total-post_samples:n_total].mean())
@@ -426,7 +426,7 @@ if __name__=='__main__':
 		Itot_txy_back=numpyro.deterministic("Itot_txy_back",Itot_t*Itot_xy)#jnp.sum(mu_xyt*args['T']/args['n_t']/args['n']**2))
 
 
-	print('n_pred', n_pred)
+	print('number of predicred sequences', n_pred)
 
 	if args_train['background'] not in ['constant','Poisson']:
 		GP_predictive = Predictive(sample_GP, num_samples=n_pred)
@@ -478,8 +478,8 @@ if __name__=='__main__':
 	if args_train['background'] in ['LGCP_only', 'LGCP']:
 		f_t_pred_mean=jnp.array(np.mean(GP_predictive_samples['f_t'][:,:],0));
 		f_xy_pred_mean=np.mean(GP_predictive_samples['f_xy'],0);
-		Itot_t_LGCP=jnp.sum(jnp.exp(GP_predictive_samples['f_t'][T_train:]))/args["n_t"]*(T_test-T_train)
-		Itot_xy_LGCP=jnp.sum(jnp.exp(GP_predictive_samples['f_xy']))/args_train["n_xy"]**2
+		Itot_t_LGCP=jnp.sum(jnp.exp(f_t_pred_mean[T_train:]))/args["n_t"]*(T_test-T_train)
+		Itot_xy_LGCP=jnp.sum(jnp.exp(f_xy_pred_mean))/args_train["n_xy"]**2
 
 
 	x_min, x_max, y_min, y_max=0,1,0,1
@@ -633,8 +633,8 @@ if __name__=='__main__':
 	print('n_pred',n_pred)
 	LOGLIK=np.zeros(n_pred);
 	LOGLIK_B=np.zeros(n_pred);
-	post_samples=True
-	post_mean=True
+	use_post_samples=True
+	use_post_mean=True
 	num_samples=500
 	for _,n_stop in enumerate(nums):
 		FIT=pd.DataFrame({'loglik_'+str(n_stop): np.zeros(n_pred),'loglik_std_'+str(n_stop): np.zeros(n_pred),'loglikB_'+str(n_stop): np.zeros(n_pred),'loglikB_std_'+str(n_stop): np.zeros(n_pred)})
@@ -648,121 +648,132 @@ if __name__=='__main__':
 		#n_test_pred=np.random.poisson(a_0_post_mean*(T_test-T_train),n_pred)
 		#print('n_test_pred',n_test_pred)
 
-		if post_mean:
+		if 	use_post_mean:
 			loglik= a_0_post_mean*n_stop-jnp.exp(a_0_post_mean)*(T_test-T_train)
 			LOGLIK_B=loglik
-		if post_samples:
+		if use_post_samples:
 			#n_test_pred=np.random.poisson(a_0_post_samples*(T_test-T_train), n_pred)
 			loglik= a_0_post_samples[0:n_pred]*n_stop-jnp.exp(a_0_post_samples[0:n_pred])*(T_test-T_train)
 			LOGLIK=loglik
-		
-		print('loglik using post mean',LOGLIK_B)
-		print('stdev of loglik using post mean', np.std(LOGLIK_B))
-		
-		print('loglik using samples',LOGLIK)
-		print('stdev of loglik using post samples', np.std(LOGLIK))
 
-		FIT['loglikB_'+str(n_stop)]=LOGLIK_B; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-		FIT['loglikB_std_'+str(n_stop)]=np.std(LOGLIK_B); #=np.round(np.std(ErrorA_space));
-	
-		FIT['loglik_'+str(n_stop)]=LOGLIK; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-		FIT['loglik_std_'+str(n_stop)]=np.std(LOGLIK); #=np.round(np.std(ErrorA_space));
+	if args_train['background']=='LGCP_only':
+		x_t_test=np.arange(T_train,T_test,1)
+		x_xy_test=args['x_xy']
+		indices=np.arange(n_stop)
+		#ind_t_i=np.zeros(30).astype(int)
+		for j in range(n_pred):			
+			T_pred=np.asarray(PREDICTIONS['T'][j])[indices]
+			X_pred=PREDICTIONS['X'][j][indices]
+			Y_pred=PREDICTIONS['Y'][j][indices]
+			XY_pred=np.array((X_pred,Y_pred));#print('XY_pred.size',XY_pred.shape)
+			ind_t_i=find_index_b(T_pred,x_t_test)	 
+			ind_xy_i=find_index_b(XY_pred.transpose(), args['x_xy'])
 
 
-	else:
+			if use_post_mean:
+				n_t_test=30
+				#Itot_t_mean=jnp.sum(jnp.exp(f_t_pred_mean[T_train:]))/n_t_test*(T_test-T_train)
+				#Itot_xy_mean=jnp.sum(jnp.exp(f_xy_pred_mean))/args_train["n_xy"]**2
+				Itot_t_mean=jnp.sum(jnp.exp(f_t_pred_mean[T_train:]))
+				Itot_xy_mean=jnp.sum(jnp.exp(f_xy_pred_mean))/args_train["n_xy"]**2				
+				LOGLIK_B[j]=np.sum(f_t_pred_mean[T_train:][ind_t_i]+f_xy_pred_mean[ind_xy_i]+a_0_post_mean) - Itot_t_mean*Itot_xy_mean*lambda_0_post_mean
+
+
+			if use_post_samples:
+				ll=np.sum(GP_predictive_samples['f_t'][j,T_train:][ind_t_i]+GP_predictive_samples['f_xy'][j,:][ind_xy_i]+a_0_post_samples[j])
+				Itot_t_LGCP=jnp.sum(jnp.exp(GP_predictive_samples['f_t'][j,T_train:]))/n_t_test*(T_test-T_train)
+				Itot_xy_LGCP=jnp.sum(jnp.exp(GP_predictive_samples['f_xy'][j]))/args_train["n_xy"]**2	
+				LOGLIK[j]=ll-Itot_xy_LGCP*Itot_t_LGCP*lambda_0_post_samples[j]
+
+
+
+	if args_train['background']in ['constant','LGCP']: #hawkes case
 
 		x_t_test=np.arange(T_train,T_test,1)
 		x_xy_test=args['x_xy']
-		ind_t_i=np.zeros(30).astype(int)
+		ind_t_i=np.zeros(80).astype(int)
 		for j in range(n_pred):			
+			indices=np.arange(n_stop)
 			T_pred=np.asarray(PREDICTIONS['T'][j])
 			X_pred=PREDICTIONS['X'][j]
 			Y_pred=PREDICTIONS['Y'][j]
-			XY_pred=np.array((X_pred,Y_pred))
-			#print('T_pred',T_pred)
-			ind_t_i=find_index_b(T_pred,x_t_test)	 
-			#print(ind_t_i) 
-			ind_xy_i=find_index_b(XY_pred.transpose(), args['x_xy'])
-			#print('ind_xy', ind_xy_i)
-			#print(f_t_pred_mean[T_train:][ind_t_i])
+			T_pred_all=np.concatenate((past_times,T_pred[indices].flatten()))
+			X_pred_all=np.concatenate((past_locs[0],X_pred[indices].flatten()))
+			Y_pred_all=np.concatenate((past_locs[1],Y_pred[indices].flatten()))
+			XY_pred_all=np.array((X_pred_all,Y_pred_all));#print('XY_pred.size',XY_pred.shape)
+			print(args['x_t'])
+			ind_t_i=find_index_b(T_pred_all,args['x_t'])	 
+			ind_xy_i=find_index_b(XY_pred_all.transpose(), args['x_xy'])
 
 
-			if args_train['background']=='LGCP_only':
-				if post_mean:
-					#beta_post_mean=0
-					n_t_test=30
-					Itot_t_mean=jnp.sum(jnp.exp(f_t_pred_mean[T_train:]))/n_t_test*(T_test-T_train)
-					Itot_xy_mean=jnp.sum(jnp.exp(f_xy_pred_mean))/args_train["n_xy"]**2
-					LOGLIK_B[j]=np.sum(f_t_pred_mean[T_train:][ind_t_i]+f_xy_pred_mean[ind_xy_i]+a_0_post_mean) - Itot_t_mean*Itot_xy_mean*lambda_0_post_mean
+			args_test=args_train					
+			args_test['x_min']=args['x_min']
+			args_test['x_max']=args['x_max']
+			args_test['y_min']=args['y_min']
+			args_test['y_max']=args['y_max']
+			args_test['n_t_train']=50
+			args_test['n_t_test']=80
+			args_test['T_test']=80
+			args_test['T_train']=50
+			args_test['n_stop']=n_stop
+			args_test['background']=args_train['background']
+			args_test['t_events']=T_pred_all
+			args_test['xy_events']=np.array((X_pred_all,Y_pred_all))
+			#print('background is', args_train['background'])
 
-				if post_samples:
-					#print('GP_predictive_samples[f_xy]',GP_predictive_samples['f_xy'].shape)
-					ll=np.sum(GP_predictive_samples['f_t'][j,T_train:][ind_t_i]+GP_predictive_samples['f_xy'][j,:][ind_xy_i]+a_0_post_samples[j])
-					#print('LOGLIK shape',LOGLIK.shape)
-					LOGLIK[j]=ll-Itot_xy_LGCP*Itot_t_LGCP*lambda_0_post_samples[j]
+			#print('LGCP-HAWKES')
+			if use_post_mean:				
+				#args_test=args
+				#args_test["z_dim_temporal"]=args_train["z_dim_temporal"]
+				#args_test["hidden_dim_temporal"]=args_train["hidden_dim_temporal"]
+				args_test['alpha']=alpha_post_mean
+				args_test['beta']=beta_post_mean
+				args_test['a_0']=np.log(lambda_0_post_mean)
+				args_test['sigmax_2']=sigma_x_2_post_mean
+				args_test['sigmay_2']=sigma_x_2_post_mean
+				args_test['indices_t']=ind_t_i
+				args_test['indices_xy']=ind_xy_i	
+				if args_test['background']=='LGCP':
+					args_test['f_t']=f_t_pred_mean
+					args_test['f_xy']=f_xy_pred_mean								
+				Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=1)
+				HK = Hawkes_lik_predictive(rng_key, args_test)
+				#print(HK['loglik'])
+				LOGLIK_B[j]=HK['loglik']	
+			
+			if use_post_samples:
 
-			elif args_train['background']in ['constant','LGCP']: 
-				args_test=args_train					
-				args_test['x_min']=args['x_min']
-				args_test['x_max']=args['x_max']
-				args_test['y_min']=args['y_min']
-				args_test['y_max']=args['y_max']
-				args_test['n_t_train']=50
-				args_test['n_t_test']=80
-				args_test['T_test']=80
-				args_test['T_train']=50
-				args_test['n_stop']=n_stop
-				args_test['background']=args_train['background']
-				args_test['t_events']=T_pred
-				args_test['xy_events']=np.array((X_pred,Y_pred))
-				#print('background is', args_train['background'])
-
-				#print('LGCP-HAWKES')
-				if post_mean:				
-					#args_test=args
-					#args_test["z_dim_temporal"]=args_train["z_dim_temporal"]
-					#args_test["hidden_dim_temporal"]=args_train["hidden_dim_temporal"]
-					args_test['alpha']=alpha_post_mean
-					args_test['beta']=beta_post_mean
-					args_test['a_0']=np.log(lambda_0_post_mean)
-					args_test['sigmax_2']=sigma_x_2_post_mean
-					args_test['sigmay_2']=sigma_x_2_post_mean
-					args_test['indices_t']=ind_t_i
-					args_test['indices_xy']=ind_xy_i				
-					Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=1)
-					HK = Hawkes_lik_predictive(rng_key, args_test)
-					#print(HK['loglik'])
-					LOGLIK_B[j]=HK['loglik']	
-				
-				if post_samples:
-
-					args_test['alpha']=alpha_post_samples[j]
-					args_test['beta']=beta_post_samples[j]
-					args_test['a_0']=np.log(lambda_0_post_samples[j])
-					args_test['sigmax_2']=sigma_x_2_post_samples[j]
-					args_test['sigmay_2']=sigma_x_2_post_samples[j]
-					Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=1)
-					HK = Hawkes_lik_predictive(rng_key, args_test)
-					LOGLIK[j]=HK['loglik']					
+				args_test['alpha']=alpha_post_samples[j]
+				args_test['beta']=beta_post_samples[j]
+				args_test['a_0']=np.log(lambda_0_post_samples[j])
+				args_test['sigmax_2']=sigma_x_2_post_samples[j]
+				args_test['sigmay_2']=sigma_x_2_post_samples[j]
+				if args_test['background']=='LGCP':
+					args_test['f_t']=GP_predictive_samples['f_t'][j,]	
+					args_test['f_xy']=GP_predictive_samples['f_xy'][j]	
+				Hawkes_lik_predictive = Predictive(Hawkes_likelihood, num_samples=1)
+				HK = Hawkes_lik_predictive(rng_key, args_test)
+				LOGLIK[j]=HK['loglik']					
 		
-		FIT['loglikB_'+str(n_stop)]=LOGLIK_B; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-		FIT['loglikB_std_'+str(n_stop)]=np.std(LOGLIK_B); #=np.round(np.std(ErrorA_space));
 
-		FIT['loglik_'+str(n_stop)]=LOGLIK; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-		FIT['loglik_std_'+str(n_stop)]=np.std(LOGLIK); #=np.round(np.std(ErrorA_space));
+	FIT['loglikB_'+str(n_stop)]=LOGLIK_B; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
+	FIT['loglikB_std_'+str(n_stop)]=np.std(LOGLIK_B); #=np.round(np.std(ErrorA_space));
+
+	FIT['loglik_'+str(n_stop)]=LOGLIK; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
+	FIT['loglik_std_'+str(n_stop)]=np.std(LOGLIK); #=np.round(np.std(ErrorA_space));
 
 
-		print('loglik using post mean',LOGLIK_B)
-		print('stdev of loglik using post mean', np.std(LOGLIK_B))
+	print('\nAVERAGE loglik using post mean',LOGLIK_B.mean())
+	print('stdev of loglik using post mean', np.std(LOGLIK_B))
 
-		print('loglik using samples',LOGLIK)
-		print('stdev of loglik using post samples', np.std(LOGLIK))
+	print('\,AVERAGE loglik using samples',LOGLIK.mean())
+	print('stdev of loglik using post samples', np.std(LOGLIK))
 
-		FIT['loglikB_'+str(n_stop)]=LOGLIK_B; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-		FIT['loglikB_std_'+str(n_stop)]=np.std(LOGLIK_B); #=np.round(np.std(ErrorA_space));
-	
-		FIT['loglik_'+str(n_stop)]=LOGLIK; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
-		FIT['loglik_std_'+str(n_stop)]=np.std(LOGLIK); #=np.round(np.std(ErrorA_space));
+	FIT['loglikB_'+str(n_stop)]=LOGLIK_B; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
+	FIT['loglikB_std_'+str(n_stop)]=np.std(LOGLIK_B); #=np.round(np.std(ErrorA_space));
+
+	FIT['loglik_'+str(n_stop)]=LOGLIK; #print('ErrorA_space', ErrorA_space) #EA_mean_space[ii]=np.round(np.mean(ErrorA_space),3);
+	FIT['loglik_std_'+str(n_stop)]=np.std(LOGLIK); #=np.round(np.std(ErrorA_space));
 
 
 

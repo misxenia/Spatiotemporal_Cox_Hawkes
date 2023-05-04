@@ -155,7 +155,7 @@ if __name__=='__main__':
 	  #print('t events shape',t_events_total.shape)
 	  #print('x_t size',args_train['x_t'].shape)
 	  indices_t=find_index_b(t_events_total, args_train['x_t'])
-	  indices_xy=find_index_b(xy_events_total.transpose(), args_train['x_xy'])
+	  indices_xy=find_index_b(.transpose(), args_train['x_xy'])
 	  args_train['indices_t']=indices_t
 	  args_train['indices_xy']=indices_xy
 	  
