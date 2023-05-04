@@ -1,5 +1,5 @@
 ## Spatiotemporal_Cox_Hawkes
-This code is used to run all the experiments in the paper Cox-Hawkes: doubly stochastic spatiotemporal Poisson processes
+This code is used to run all the experiments in the paper "Cox-Hawkes: doubly stochastic spatiotemporal Poisson processes"
 accepted for publication at the Transactions of Machine Learning Research. 
 For the simulation experiment the code allows you to simulate data from the LGCP-Hawkes model and perform inference. 
 For the misspecification experiment the code allows you to simulate data from the models LGCP, LGCP-Hawkes and Hawkes and perform inference under all three. Then, future data are predicted using the estimated model and then compared with the ones under the 'true' model.
@@ -27,5 +27,6 @@ requirements.txt
 
 #### True dataset(gunshots)
 * Perform inference under the model LGCP-Hawkes
+
 
 
