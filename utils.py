@@ -19,6 +19,7 @@ from functools import partial
 
 def square_mean(a,b):
   return np.mean((a-b)**2)
+
 def sq_diff(a,b):
   return np.sum((a-b)**2)
   
